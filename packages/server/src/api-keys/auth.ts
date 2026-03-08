@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { createMiddleware } from 'hono/factory';
 import type { Db } from '../db/connection.js';
 import { apiKeys } from '../db/schema/index.js';
-import { hashApiKey } from '../lib/api-key.js';
+import { hashApiKey } from './hash.js';
 
 interface AuthContext {
   environmentId: string;

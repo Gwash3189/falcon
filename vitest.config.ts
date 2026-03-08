@@ -9,5 +9,11 @@ export default defineConfig({
       'packages/sdk-node/vitest.config.ts',
       'packages/web/vitest.config.ts',
     ],
+    coverage: {
+      provider: 'v8',
+      include: ['packages/*/src/**'],
+      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+    },
   },
 });

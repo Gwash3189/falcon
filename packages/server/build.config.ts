@@ -15,6 +15,6 @@ export default defineBuildConfig({
     'drizzle-orm/postgres-js',
     'postgres',
     'zod',
-    'ioredis',
+    'iovalkey',
   ],
 });

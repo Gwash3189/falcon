@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/connection.js';
 import { type ApiKey, apiKeys } from '../db/schema/index.js';
-import { generateApiKey } from '../lib/api-key.js';
+import { generateApiKey } from './hash.js';
 
 export interface CreatedApiKey {
   apiKey: ApiKey;

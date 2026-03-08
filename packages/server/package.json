@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=../../.env src/index.ts",
     "build": "unbuild",
+    "db:migrate": "drizzle-kit migrate",
     "test": "vitest run"
   },
   "dependencies": {
@@ -16,7 +17,7 @@
     "bullmq": "^5.70.4",
     "drizzle-orm": "^0.39.0",
     "hono": "^4.7.0",
-    "ioredis": "^5.4.2",
+    "iovalkey": "^0.3.3",
     "postgres": "^3.4.5",
     "zod": "^3.23.8"
   },

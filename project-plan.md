@@ -1,312 +1,499 @@
-# Feature Flag Service — Foundation Plan
+Falcon Improvement Plan
 
-## Project Name: `falcon` (placeholder — rename anytime)
+    How to Read This Plan
 
----
+    Cards are grouped into phases. Cards within a phase can be worked in parallel. A phase must be complete before the next phase begins. Each card
+    has acceptance criteria so you know when it's done.
 
-## How to Read This Plan
+    ---
 
-Cards are grouped into **phases**. Cards within the same phase can be worked **in parallel**. A phase must be complete before the next phase begins. Each card has acceptance criteria so you know when it's done.
+    Phase 1 — Observability & Error Handling Foundation
 
----
+    > These improvements unlock better debugging and set up patterns for everything else. All cards can be worked in parallel.
 
-## Package Architecture
+    ---
 
-The monorepo has five packages. Three are **publishable** (users install them), two are **private** (internal only, never published to npm). During development, everything is linked via pnpm workspaces — you just import and it works. For production, `unbuild` bundles shared code into the packages that need it so there's no runtime dependency on private packages.
+    CARD-001: Centralized Error Handling
 
-```
-packages/
-  shared/        ← PRIVATE  — Zod schemas, types, config validation
-  web/           ← PRIVATE  — secondary web UI (Hono JSX, served by server)
-  server/        ← PUBLIC   — the deployable flag service (npx @falcon/server)
-  cli/           ← PUBLIC   — developer CLI (npx @falcon/cli)
-  sdk-node/      ← PUBLIC   — SDK for evaluating flags in user apps
-```
+    Goal: One error handler for the entire app. Controllers stop catching errors manually.
 
-**The development experience:** You edit any file in any package, and `tsx watch` picks it up. No build step during dev. Imports across packages resolve instantly via workspace linking. You never think about unbuild until you're publishing.
+    Work:
+     1. Create packages/server/src/errors.ts:
 
----
+      1    export class AppError extends Error {
+      2      constructor(
+      3        public code: string,
+      4        public status: number,
+      5        message: string
+      6      ) {
+      7        super(message);
+      8      }
+      9    }
+     10    export class NotFoundError extends AppError { constructor(msg) { super('NOT_FOUND', 404, msg); } }
+     11    export class ConflictError extends AppError { constructor(msg) { super('CONFLICT', 409, msg); } }
+     12    export class UnauthorizedError extends AppError { constructor(msg) { super('UNAUTHORIZED', 401, msg); } }
+     13    export class BadRequestError extends AppError { constructor(msg) { super('BAD_REQUEST', 400, msg); } }
 
-## Phase 0 — Local Infrastructure
+     2. Update packages/server/src/app.ts — add global error handler:
 
-> No code yet. Just make sure a developer can clone the repo and have a working Postgres + Redis running in seconds.
+     1    app.onError((err, c) => {
+     2      if (err instanceof AppError) {
+     3        return c.json({ error: { code: err.code, message: err.message } }, err.status);
+     4      }
+     5      // Log full error for debugging
+     6      console.error('Unhandled error:', err);
+     7      return c.json({ error: { code: 'INTERNAL', message: 'Internal server error' } }, 500);
+     8    });
 
-### CARD-001: Container Services for Local Dev
+     3. Update packages/server/src/services/flags.ts:
+        - Replace isUniqueViolation() catch with throw new ConflictError('Flag already exists')
 
-**Goal:** One command gives you Postgres 16 and Redis 7. Runtime-agnostic — works with Podman (recommended, Apache 2.0) or Docker.
+     4. Update controllers to remove try/catch blocks — let errors bubble up
 
-**Work:**
-- Create `docker-compose.yml` at the repo root (the compose spec is runtime-agnostic)
-- Postgres on port `5432`, database `falcon_dev`, user `falcon`, password `falcon`
-- Redis on port `6379`
-- Add a `volumes` entry so Postgres data survives restarts
-- Add a `.env.example` with `DATABASE_URL` and `REDIS_URL` populated for local dev
+    Acceptance:
+     - Duplicate flag creation returns 409 with { error: { code: 'CONFLICT', ... } }
+     - Missing resource returns 404 with { error: { code: 'NOT_FOUND', ... } }
+     - No try/catch in controllers for error handling
+     - All existing tests still pass
 
-**Acceptance:**
-- `podman compose up -d` (or `docker compose up -d`) starts both services
-- `psql $DATABASE_URL -c "SELECT 1"` succeeds
-- `redis-cli ping` returns PONG
+    ---
 
----
+    CARD-002: Request Logging Middleware
 
-## Phase 1 — Monorepo Scaffold
+    Goal: Every HTTP request is logged with method, path, status, and duration.
 
-> All cards in this phase are independent of each other. Work them in any order or simultaneously.
+    Work:
+     1. Create packages/server/src/middleware/logger.ts:
 
-### CARD-002: Monorepo & Workspace Init
+     1    import { createMiddleware } from 'hono/factory';
+     2    export const requestLogger = createMiddleware(async (c, next) => {
+     3      const start = Date.now();
+     4      await next();
+     5      const duration = Date.now() - start;
+     6      console.log(`${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`);
+     7    });
 
-**Goal:** Clean pnpm workspace monorepo where every package is importable by every other package with zero friction.
+     2. In packages/server/src/app.ts, add middleware at the top:
 
-**Work:**
-- `pnpm init` at root
-- Create `pnpm-workspace.yaml` pointing to `packages/*`
-- Create package dirs: `packages/server`, `packages/cli`, `packages/shared`, `packages/web`, `packages/sdk-node`
-- Each package gets its own `package.json`:
-  - Name: `@falcon/server`, `@falcon/cli`, `@falcon/shared`, `@falcon/web`, `@falcon/sdk-node`
-  - `@falcon/shared` and `@falcon/web` get `"private": true`
-  - All packages get `"type": "module"`
-- Packages that depend on `@falcon/shared` list it in their `package.json` dependencies as `"@falcon/shared": "workspace:*"` — pnpm resolves this to the local copy automatically
-- Root `package.json` gets shared dev scripts: `dev`, `build`, `test`, `lint`, `typecheck`
+     1    app.use('*', requestLogger);
 
-**Acceptance:**
-- `pnpm install` completes with no errors
-- `pnpm -r exec pwd` lists all five packages
-- In `packages/server/src/index.ts`, the import `import { } from '@falcon/shared'` resolves without error
+     3. Add test in packages/server/src/middleware/__tests__/logger.test.ts:
+        - Spy on console.log, assert it's called with correct format
 
----
+    Acceptance:
+     - Every request logs: GET /health 200 12ms
+     - Tests pass
+     - No logging on health checks in test environment (optional: add if (config.NODE_ENV === 'test') return next())
 
-### CARD-003: TypeScript Configuration
+    ---
 
-**Goal:** Single base tsconfig, extended per package. Strict mode everywhere. Cross-package imports just work.
+    CARD-003: Redis Health Check
 
-**Work:**
-- Create `tsconfig.base.json` at root: strict, ESM, `"module": "NodeNext"`, `"moduleResolution": "NodeNext"`, `"declaration": true`
-- Each package gets `tsconfig.json` extending the base with its own `include` and `outDir`
-- No TypeScript project references needed — workspace linking handles resolution during dev, and unbuild handles it at build time
+    Goal: /health returns 503 if Redis is unreachable.
 
-**Acceptance:**
-- `pnpm --filter @falcon/server exec tsc --noEmit` passes on an empty `src/index.ts`
-- Types from `@falcon/shared` are visible in `server` and `cli` via the workspace link
+    Work:
+     1. Create packages/server/src/db/redis-health.ts:
 
----
+     1    import type { Redis } from 'iovalkey';
+     2    export async function checkRedis(redis: Redis): Promise<boolean> {
+     3      try {
+     4        await redis.ping();
+     5        return true;
+     6      } catch {
+     7        return false;
+     8      }
+     9    }
+
+     2. Update packages/server/src/app.ts health route:
+
+      1    app.get('/health', async (c) => {
+      2      const [dbHealthy, redisHealthy] = await Promise.all([
+      3        checkDatabase(db),
+      4        checkRedis(redis)
+      5      ]);
+      6      const timestamp = new Date().toISOString();
+      7      if (dbHealthy && redisHealthy) {
+      8        return c.json({ status: 'ok', timestamp }, 200);
+      9      }
+     10      return c.json({ status: 'unavailable', timestamp }, 503);
+     11    });
+
+     3. Update tests in packages/server/src/__tests__/health.test.ts:
+        - Add test: returns 503 when Redis is down
+        - Update mock Redis to support ping()
+
+    Acceptance:
+     - With Redis stopped: curl /health returns 503
+     - With both healthy: returns 200
+     - Tests cover all 4 combinations (db up/down × redis up/down)
+
+    ---
+
+    Phase 2 — Security & Stability
 
-### CARD-004: Biome Setup
+    > These cards protect the server from abuse and ensure clean shutdowns. Can be worked in parallel.
+
+    ---
+
+    CARD-004: Rate Limiting on /evaluate
+
+    Goal: API key rate limiting on the evaluation endpoint (1000 req/min per key).
 
-**Goal:** Consistent formatting and linting across the entire repo with zero config debates.
+    Work:
+     1. Create packages/server/src/middleware/rate-limit.ts:
 
-**Work:**
-- `pnpm add -Dw @biomejs/biome`
-- Create `biome.json` at root (use recommended rules, 2-space indent, single quotes, trailing commas)
-- Add root scripts: `lint` → `biome check .`, `format` → `biome format . --write`
-- Add a `.editorconfig` that matches Biome's settings
-
-**Acceptance:**
-- `pnpm lint` runs across all packages
-- `pnpm format` auto-fixes formatting
-
----
-
-### CARD-005: Vitest Setup
-
-**Goal:** Test runner configured and working per-package.
+      1    import { createMiddleware } from 'hono/factory';
+      2    import type { Redis } from 'iovalkey';
+      3    export function rateLimit(redis: Redis, windowMs: number, max: number) {
+      4      return createMiddleware(async (c, next) => {
+      5        const key = `ratelimit:${c.get('auth')?.keyPrefix || 'anon'}:${Date.now() - (Date.now() % windowMs)}`;
+      6        const current = await redis.incr(key);
+      7        if (current === 1) await redis.pexpire(key, windowMs);
+      8        if (current > max) {
+      9          return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, 429);
+     10        }
+     11        await next();
+     12      });
+     13    }
 
-**Work:**
-- `pnpm add -Dw vitest`
-- Create `vitest.workspace.ts` at root pointing to each package
-- Each package with tests gets a `vitest.config.ts`
-- Add a dummy test in `packages/shared` (`src/__tests__/smoke.test.ts`) that asserts `true === true`
+     2. Update packages/server/src/routes/evaluate.ts:
 
-**Acceptance:**
-- `pnpm test` from root discovers and runs tests across all packages
-- `pnpm --filter @falcon/shared test` runs only that package's tests
+     1    router.post('/', rateLimit(redis, 60_000, 1000), apiKeyAuth(db), ...)
 
----
+     3. Add test in packages/server/src/middleware/__tests__/rate-limit.test.ts:
+        - Make 1001 requests, assert 429 on the last one
 
-## Phase 2 — Shared Package & Database Layer
+    Acceptance:
+     - 1000 requests in 60s succeed
+     - 1001st request returns 429
+     - Rate limit resets after 60s
+     - Tests pass
+
+    ---
 
-> These two cards can be worked in parallel. The shared package provides config validation. The database card uses it.
+    CARD-005: Graceful Shutdown
+
+    Goal: Server handles SIGTERM/SIGINT — closes connections, drains queue, exits cleanly.
 
-### CARD-006: Shared Config, Env Validation & unbuild
+    Work:
+     1. Update packages/server/src/index.ts:
 
-**Goal:** A single place where all environment variables are validated and typed. Bundled via unbuild so published packages don't depend on `@falcon/shared` at runtime.
+      1    const server = serve({ fetch: app.fetch, port: config.PORT }, () => {
+      2      console.log(`falcon server listening on :${config.PORT}`);
+      3    });
+      4
+      5    async function shutdown() {
+      6      console.log('Shutting down...');
+      7      server.close();
+      8      await worker.close();
+      9      await queue.close();
+     10      await redis.quit();
+     11      await db.$client.end();
+     12      process.exit(0);
+     13    }
+     14
+     15    process.on('SIGTERM', shutdown);
+     16    process.on('SIGINT', shutdown);
 
-**Work:**
-- `pnpm add zod --filter @falcon/shared`
-- `pnpm add -D unbuild --filter @falcon/shared`
-- Create `packages/shared/src/config.ts`
-  - Define a Zod schema for the environment: `DATABASE_URL` (string, url), `REDIS_URL` (string, url), `PORT` (number, default 3000), `NODE_ENV` (enum: development, production, test)
-  - Export a `parseEnv()` function that parses `process.env` and throws clear errors on failure
-  - Export the inferred TypeScript type `AppConfig`
-- Create `packages/shared/src/index.ts` as the barrel export
-- Create `packages/shared/build.config.ts` for unbuild:
-  - Entry: `src/index.ts`
-  - Output: `dist/`
-  - Generate declaration files
-- Add `"main"` and `"types"` fields in shared's `package.json` pointing to `dist/`
-- Add `build` script: `unbuild`
+     2. Add test: mock all dependencies, call shutdown(), assert all close methods called
 
-**Why unbuild here:** During dev, pnpm workspaces resolve `@falcon/shared` to the live source — no build needed. When you publish `@falcon/server` or `@falcon/cli`, their build step bundles shared's compiled output so the published package has zero workspace dependencies. unbuild is zero-config by default and handles ESM, CJS, and declaration generation.
+    Acceptance:
+     - kill -TERM <pid> shuts down cleanly in under 5 seconds
+     - No "connection reset" errors in logs
+     - BullMQ worker stops processing new jobs
+     - All connections closed (no hanging handles)
 
-**Acceptance:**
-- Unit test: calling `parseEnv()` with missing `DATABASE_URL` throws a readable Zod error
-- Unit test: calling `parseEnv()` with valid env returns a typed `AppConfig` object
-- `pnpm --filter @falcon/shared build` produces `dist/index.mjs` and `dist/index.d.ts`
-- Types are importable from `@falcon/shared` in other packages during dev without building
+    ---
 
----
+    CARD-006: Input Validation on Path Parameters
 
-### CARD-007: Drizzle ORM & Database Connection
+    Goal: Invalid UUIDs in path params return 400 immediately.
 
-**Goal:** Drizzle connected to Postgres with a health-check query helper.
+    Work:
+     1. Create packages/server/src/lib/validation.ts:
 
-**Work:**
-- `pnpm add drizzle-orm postgres --filter @falcon/server`
-- `pnpm add -D drizzle-kit --filter @falcon/server`
-- Create `packages/server/src/db/connection.ts`
-  - Accepts a `DATABASE_URL` string, returns a Drizzle client using the `postgres` driver
-  - Export a `createDb(url: string)` factory function (no singletons — makes testing easy)
-- Create `packages/server/src/db/health.ts`
-  - Export `checkDatabase(db): Promise<boolean>` that runs `SELECT 1` and returns true/false
-- Create `packages/server/drizzle.config.ts` for migration tooling (point at a schema dir even though it's empty for now)
+     1    import { z } from 'zod';
+     2    export const uuidSchema = z.string().uuid();
+     3    export const slugSchema = z.string().regex(/^[a-z0-9-]+$/);
 
-**Acceptance:**
-- Integration test (with real DB via container): `createDb()` connects and `checkDatabase()` returns `true`
-- Unit test: `checkDatabase()` returns `false` when given a bad connection string (doesn't throw)
+     2. Update route files to validate params:
 
----
+     1    // routes/flags.ts
+     2    const paramsSchema = z.object({
+     3      projectId: uuidSchema,
+     4      envId: uuidSchema,
+     5      flagKey: z.string().regex(/^[a-z0-9_-]+$/),
+     6    });
+     7    router.get('/:flagKey', zValidator('param', paramsSchema), ctrl.list);
 
-## Phase 3 — Hono Server & Health Endpoint
+     3. Update controllers to use validated params:
 
-> This phase depends on Phase 2 being complete. One card.
+     1    const { projectId, envId } = c.req.valid('param');
 
-### CARD-008: Hono Server with /health Endpoint
+    Acceptance:
+     - GET /api/not-a-uuid/environments/... returns 400
+     - Valid UUIDs pass through
+     - All existing tests still pass
 
-**Goal:** A running HTTP server with a single endpoint that proves the database is reachable.
+    ---
 
-**Work:**
-- `pnpm add hono @hono/node-server --filter @falcon/server`
-- Create `packages/server/src/app.ts`
-  - Creates and exports the Hono app (no listening — just the app instance)
-  - Accepts dependencies (db client) as arguments — no global imports
-  - Registers a `GET /health` route:
-    - Calls `checkDatabase(db)`
-    - If true: returns `200 { status: "ok", timestamp: <ISO string> }`
-    - If false: returns `503 { status: "unavailable", timestamp: <ISO string> }`
-- Create `packages/server/src/index.ts`
-  - Imports `parseEnv()` from `@falcon/shared` (resolved via workspace link, no build required)
-  - Validates the environment
-  - Creates the DB connection
-  - Passes it into the app factory
-  - Calls `serve()` from `@hono/node-server` on the configured port
-  - Logs: `falcon server listening on :3000`
-- Add a `dev` script in server's `package.json`: `tsx watch src/index.ts`
+    Phase 3 — Code Quality & Maintainability
 
-**Acceptance:**
-- `podman compose up -d && pnpm --filter @falcon/server dev` starts the server
-- `curl http://localhost:3000/health` returns `200` with `{ "status": "ok" }`
-- Stopping Postgres → `curl /health` returns `503` with `{ "status": "unavailable" }`
-- Integration test: uses the Hono test client (no real HTTP needed) with a test DB to assert both 200 and 503 paths
+    > These cards reduce technical debt and make future development easier. Can be worked in parallel.
 
----
+    ---
 
-## Phase 4 — Developer Experience Polish
+    CARD-007: Extract Server Factory
 
-> All cards here are independent. Work in any order.
+    Goal: createServer() function for easier testing and embedding.
 
-### CARD-009: Root Dev Script (Run Everything)
+    Work:
+     1. Create packages/server/src/server.ts:
 
-**Goal:** `pnpm dev` at the root starts container services and the server in one command.
+      1    import { parseEnv } from '@falcon/shared';
+      2    import { createApp } from './app.js';
+      3    import { createDb } from './db/connection.js';
+      4    import { createAuditQueue } from './queue/client.js';
+      5    import { createAuditWorker } from './queue/worker.js';
+      6    import { Redis } from 'iovalkey';
+      7
+      8    export async function createServer() {
+      9      const config = parseEnv();
+     10      const db = createDb(config.DATABASE_URL);
+     11      const redis = new Redis(config.VALKEY_URL);
+     12      const queue = createAuditQueue(config.VALKEY_URL);
+     13      const worker = createAuditWorker(config.VALKEY_URL, db);
+     14      const app = createApp({ db, redis, queue });
+     15      return { app, config, db, redis, queue, worker };
+     16    }
 
-**Work:**
-- Add a root `dev` script that runs `podman compose up -d` (or `docker compose up -d` — detect what's available) then `pnpm --filter @falcon/server dev`
-- Add a root `dev:down` script that tears everything down
-- Document this in the root `README.md`
+     2. Update packages/server/src/index.ts:
 
-**Acceptance:**
-- Fresh clone → `pnpm install && pnpm dev` → server is running and `/health` returns 200
-- `pnpm dev:down` stops everything cleanly
+     1    import { createServer } from './server.js';
+     2    import { serve } from '@hono/node-server';
+     3    const { app, config, worker } = await createServer();
+     4    serve({ fetch: app.fetch, port: config.PORT }, () => {...});
 
----
+     3. Update tests to use createServer() instead of manual wiring
 
-### CARD-010: Seed .env Handling
+    Acceptance:
+     - createServer() returns app and all dependencies
+     - Server starts normally via pnpm dev
+     - Tests simplified (less boilerplate)
 
-**Goal:** Don't make devs think about env vars on first run.
+    ---
 
-**Work:**
-- Create `.env.example` at root (already started in CARD-001, finalize it here)
-- Add a `predev` script or a small shell script that copies `.env.example` to `.env` if `.env` doesn't exist
-- Add `.env` to `.gitignore`
-- `packages/server/src/index.ts` loads `.env` via Node's `--env-file` flag in the dev script (e.g. `tsx watch --env-file=../../.env src/index.ts`)
+    CARD-008: Route Constants
 
-**Acceptance:**
-- Delete `.env`, run `pnpm dev`, server still starts because defaults are applied
-- Custom `.env` values override defaults
+    Goal: Single source of truth for API paths.
 
----
+    Work:
+     1. Add to packages/shared/src/index.ts:
 
-### CARD-011: README & Contributing Guide
+      1    export const API_ROUTES = {
+      2      evaluate: '/evaluate',
+      3      projects: (id: string) => `/api/projects/${id}`,
+      4      environments: (projectId: string, envId: string) =>
+      5        `/api/projects/${projectId}/environments/${envId}`,
+      6      flags: (projectId: string, envId: string) =>
+      7        `/api/projects/${projectId}/environments/${envId}/flags`,
+      8      apiKeys: (projectId: string, envId: string) =>
+      9        `/api/projects/${projectId}/environments/${envId}/api-keys`,
+     10    };
 
-**Goal:** A new contributor can go from zero to running server in under 3 minutes.
+     2. Update CLI commands to import and use:
 
-**Work:**
-- Root `README.md`: project description, prerequisites (Node 20+, pnpm 9+, Podman or Docker), quickstart (3 commands), project structure overview (explain public vs private packages), link to contributing guide
-- `CONTRIBUTING.md`: how to add a new package, how to run tests, commit conventions, PR expectations
-- Keep both files short — no walls of text
+     1    import { API_ROUTES } from '@falcon/shared';
+     2    const url = API_ROUTES.flags(projectId, envId);
 
-**Acceptance:**
-- Someone unfamiliar with the project can follow the README and hit `/health` successfully
-- Project structure section accurately reflects the actual directory layout
+     3. Update server routes to use constants where applicable
 
----
+    Acceptance:
+     - CLI commands use API_ROUTES instead of string concatenation
+     - Changing a route path only requires one edit
+     - All tests pass
 
-### CARD-012: Server Build & Publish Config
+    ---
 
-**Goal:** `@falcon/server` can be built into a standalone publishable package that has no workspace dependencies.
+    CARD-009: Consistent CLI --json Support
 
-**Work:**
-- `pnpm add -D unbuild --filter @falcon/server`
-- Create `packages/server/build.config.ts`:
-  - Entry: `src/index.ts`
-  - Externalize runtime deps (`hono`, `@hono/node-server`, `drizzle-orm`, `postgres`, `zod`)
-  - Inline `@falcon/shared` (it gets bundled into the server's dist, not left as an external dep)
-- Add `build` script: `unbuild`
-- Add `"main"`, `"types"`, `"bin"` fields in server's `package.json`
-- Verify that the built output does NOT contain a `@falcon/shared` import
+    Goal: Every CLI command supports --json for scripting.
 
-**Acceptance:**
-- `pnpm --filter @falcon/server build` produces `dist/` with working JS and type declarations
-- `node packages/server/dist/index.mjs` starts the server (with env vars set)
-- `grep -r "@falcon/shared" packages/server/dist/` returns nothing — shared code is inlined
-- `npm pack --dry-run` in the server package shows a clean package with no workspace references
+    Work:
+     1. Create packages/cli/src/lib/output.ts:
 
----
+     1    export function output<T>(config: { json?: boolean }, data: T, humanFormatter: (d: T) => string) {
+     2      if (config.json) {
+     3        console.log(JSON.stringify(data, null, 2));
+     4      } else {
+     5        console.log(humanFormatter(data));
+     6      }
+     7    }
 
-## Dependency Graph (Visual Summary)
+     2. Audit all commands in packages/cli/src/commands/:
+        - Add --json flag if missing
+        - Use output() helper for consistent formatting
 
-```
-Phase 0:  [CARD-001 Containers]
-               │
-Phase 1:  [CARD-002 Monorepo] [CARD-003 TS] [CARD-004 Biome] [CARD-005 Vitest]
-               │                     │
-Phase 2:  [CARD-006 Shared+unbuild] [CARD-007 Drizzle + DB]
-               │                     │
-               └──────┬──────────────┘
-                      │
-Phase 3:         [CARD-008 Hono + /health]
-                      │
-Phase 4:  [CARD-009 Dev Script] [CARD-010 .env] [CARD-011 README] [CARD-012 Build]
-```
+     3. Add test: each command with --json outputs valid JSON
 
----
+    Acceptance:
+     - Every command has --json flag
+     - falcon projects:list --json outputs valid JSON array
+     - Human-readable output unchanged
+     - Tests verify JSON output is parseable
 
-## Notes for Claude Code
+    ---
 
-- When working a card, read its acceptance criteria first — they are your definition of done.
-- Prefer explicit over clever. No barrel re-exports more than one level deep.
-- Every file should have a single clear responsibility. If a file does two things, split it.
-- Keep dependencies minimal. If you're tempted to add a package, check if Node or an existing dep already covers it.
-- All paths assume ESM (`"type": "module"` in every `package.json`).
-- Use `node:` prefix for all Node built-ins (`node:path`, `node:fs`, etc).
-- During development, never require a build step. `tsx` resolves workspace links to source directly.
-- The only time `unbuild` runs is in CI or before publishing. Don't make developers think about it.
-- Private packages (`shared`, `web`) must never appear as a dependency in a published package's `dist/` output. unbuild inlines them.
+    Phase 4 — Production Readiness
+
+    > Final polish for deployment and documentation.
+
+    ---
+
+    CARD-010: Dockerfile for Server
+
+    Goal: Deployable Docker image for the server.
+
+    Work:
+     1. Create Dockerfile at repo root:
+
+      1    FROM node:20-alpine AS builder
+      2    WORKDIR /app
+      3    RUN corepack enable && corepack prepare pnpm@9 --activate
+      4    COPY . .
+      5    RUN pnpm install --frozen-lockfile
+      6    RUN pnpm build
+      7
+      8    FROM node:20-alpine
+      9    WORKDIR /app
+     10    COPY --from=builder /app/packages/server/dist ./dist
+     11    COPY --from=builder /app/node_modules ./node_modules
+     12    EXPOSE 3000
+     13    CMD ["node", "dist/index.mjs"]
+
+     2. Create .dockerignore:
+
+     1    node_modules
+     2    dist
+     3    .env
+     4    coverage
+
+     3. Add to package.json:
+
+     1    "docker:build": "docker build -t falcon-server ."
+
+     4. Document in README: docker run -e DATABASE_URL=... -p 3000:3000 falcon-server
+
+    Acceptance:
+     - docker build -t falcon-server . succeeds
+     - Container starts and /health returns 200
+     - Image size under 200MB
+
+    ---
+
+    CARD-011: CI Workflow
+
+    Goal: GitHub Actions runs tests, lint, typecheck on every PR.
+
+    Work:
+     1. Create .github/workflows/ci.yml:
+
+      1    name: CI
+      2    on: [push, pull_request]
+      3    jobs:
+      4      test:
+      5        runs-on: ubuntu-latest
+      6        services:
+      7          postgres: { image: postgres:16, env: {...}, ports: ['5432:5432'] }
+      8          redis: { image: redis:7, ports: ['6379:6379'] }
+      9        steps:
+     10          - uses: actions/checkout@v4
+     11          - uses: pnpm/action-setup@v4
+     12          - uses: actions/setup-node@v4
+     13            with: { node-version: '20', cache: 'pnpm' }
+     14          - run: pnpm install --frozen-lockfile
+     15          - run: pnpm lint
+     16          - run: pnpm typecheck
+     17          - run: pnpm test
+     18          - run: pnpm build
+
+     2. Add badge to README: [![CI](...)](...)
+
+    Acceptance:
+     - Push to main triggers CI
+     - All steps pass
+     - PR shows check status
+
+    ---
+
+    CARD-012: Remove Empty web Package
+
+    Goal: Reduce cognitive load by removing dead code.
+
+    Work:
+     1. Delete packages/web/ directory
+     2. Remove from vitest.workspace.ts
+     3. Update project-plan.md to note web UI is v2, not in repo yet
+     4. Update README package architecture section
+
+    Acceptance:
+     - pnpm test still works
+     - No references to web package remain
+     - Documentation accurate
+
+    ---
+
+    CARD-013: OpenAPI Documentation
+
+    Goal: Auto-generated API docs at /openapi.json.
+
+    Work:
+     1. pnpm add @hono/zod-openapi --filter @falcon/server
+
+     2. Update packages/server/src/app.ts:
+
+     1    import { OpenAPIHono } from '@hono/zod-openapi';
+     2    const app = new OpenAPIHono<{ Variables: { auth: AuthContext } }>();
+
+     3. Add OpenAPI route:
+
+     1    app.doc('/openapi.json', {
+     2      openapi: '3.0.0',
+     3      info: { title: 'Falcon API', version: '1.0.0' },
+     4    });
+
+     4. Document in README: "API docs at http://localhost:3000/openapi.json"
+
+    Acceptance:
+     - curl /openapi.json returns valid OpenAPI 3.0 spec
+     - All endpoints documented
+     - Can import into Swagger UI or Insomnia
+
+    ---
+
+    Dependency Graph
+
+     1 Phase 1:  [CARD-001 Errors] [CARD-002 Logger] [CARD-003 Redis Health]
+     2                                     │
+     3 Phase 2:  [CARD-004 Rate Limit] [CARD-005 Shutdown] [CARD-006 Validation]
+     4                                     │
+     5 Phase 3:  [CARD-007 Server Factory] [CARD-008 Routes] [CARD-009 CLI --json]
+     6                                     │
+     7 Phase 4:  [CARD-010 Dockerfile] [CARD-011 CI] [CARD-012 Remove web] [CARD-013 OpenAPI]
+
+    ---
+
+    Recommended Order
+
+
+    ┌──────┬────────────────────────────────────────┐
+    │ Week │ Cards                                  │
+    ├──────┼────────────────────────────────────────┤
+    │ 1    │ CARD-001, CARD-002, CARD-003           │
+    │ 2    │ CARD-004, CARD-005, CARD-006           │
+    │ 3    │ CARD-007, CARD-008, CARD-009           │
+    │ 4    │ CARD-010, CARD-011, CARD-012, CARD-013 │
+    └──────┴────────────────────────────────────────┘
+
+
+    Each week builds on the previous. Don't skip Phase 1 — the error handling and logging patterns make everything else easier.

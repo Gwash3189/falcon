@@ -6,7 +6,7 @@
  * Integration tests require a running PostgreSQL database. They are skipped
  * automatically when DATABASE_URL is not set (e.g. in pure-unit CI jobs).
  */
-import type { Redis } from 'ioredis';
+import type { Redis } from 'iovalkey';
 import { createApp } from '../../app.js';
 import { createDb } from '../../db/connection.js';
 import type { AuditQueue } from '../../queue/client.js';

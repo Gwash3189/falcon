@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis';
+import type { Redis } from 'iovalkey';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createDb } from '../db/connection.js';

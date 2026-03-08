@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 import type { Db } from '../../db/connection.js';
-import { generateApiKey, hashApiKey } from '../../lib/api-key.js';
-import { apiKeyAuth } from '../api-key-auth.js';
+import { apiKeyAuth } from '../auth.js';
+import { generateApiKey, hashApiKey } from '../hash.js';
 
 interface StubRow {
   environmentId: string;

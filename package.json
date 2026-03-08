@@ -8,12 +8,14 @@
     "dev:down": "podman compose down 2>/dev/null || docker compose down",
     "build": "pnpm -r --filter './packages/*' build",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "lint": "biome check .",
     "format": "biome format . --write",
     "typecheck": "pnpm -r exec tsc --noEmit"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
+    "@vitest/coverage-v8": "^3.2.4",
     "vitest": "^3.0.0"
   }
 }

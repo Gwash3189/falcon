@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
-import type { Redis } from 'ioredis';
+import type { Redis } from 'iovalkey';
+import { createApiKeysRouter } from './api-keys/router.js';
 import type { Db } from './db/connection.js';
 import { checkDatabase } from './db/health.js';
+import { createEnvironmentsRouter } from './environments/router.js';
+import { createEvaluateRouter } from './evaluate/router.js';
+import { createFlagsRouter } from './flags/router.js';
+import { createProjectsRouter } from './projects/router.js';
 import type { AuditQueue } from './queue/client.js';
-import { createApiKeysRouter } from './routes/api-keys.js';
-import { createEnvironmentsRouter } from './routes/environments.js';
-import { createEvaluateRouter } from './routes/evaluate.js';
-import { createFlagsRouter } from './routes/flags.js';
-import { createProjectsRouter } from './routes/projects.js';
 
 interface AppDeps {
   db: Db;
