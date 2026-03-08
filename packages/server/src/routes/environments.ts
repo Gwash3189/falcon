@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/connection.js';
+import { isUniqueViolation } from '../db/errors.js';
 import {
   createEnvironment,
   deleteEnvironment,
@@ -54,8 +55,7 @@ export function createEnvironmentsRouter(db: Db) {
       const data = await createEnvironment(db, projectId, body);
       return c.json({ data }, 201);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('unique') || msg.includes('duplicate')) {
+      if (isUniqueViolation(err)) {
         return c.json(
           {
             error: {
@@ -94,8 +94,7 @@ export function createEnvironmentsRouter(db: Db) {
         return c.json({ error: { code: 'NOT_FOUND', message: 'Environment not found' } }, 404);
       return c.json({ data });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('unique') || msg.includes('duplicate')) {
+      if (isUniqueViolation(err)) {
         return c.json(
           {
             error: {

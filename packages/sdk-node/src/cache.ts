@@ -25,4 +25,8 @@ export class TtlCache<T> {
   delete(key: string): void {
     this.store.delete(key);
   }
+
+  clear(): void {
+    this.store.clear();
+  }
 }

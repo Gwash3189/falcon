@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/connection.js';
+import { isUniqueViolation } from '../db/errors.js';
 import type { AuditQueue } from '../queue/client.js';
 import { getEnvironment } from '../services/environments.js';
 import { createFlag, deleteFlag, getFlagByKey, listFlags, updateFlag } from '../services/flags.js';
@@ -60,8 +61,7 @@ export function createFlagsRouter(db: Db, queue: AuditQueue) {
       const data = await createFlag(db, queue, envId, body);
       return c.json({ data }, 201);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('unique') || msg.includes('duplicate')) {
+      if (isUniqueViolation(err)) {
         return c.json(
           {
             error: {

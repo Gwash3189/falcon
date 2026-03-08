@@ -65,8 +65,7 @@ export function createFalconClient(options: FalconClientOptions): FalconClient {
   }
 
   function clearCache() {
-    // Replace with a fresh cache instance
-    Object.assign(cache, new TtlCache<boolean>(cacheTtlMs));
+    cache.clear();
   }
 
   return { evaluate, clearCache };
