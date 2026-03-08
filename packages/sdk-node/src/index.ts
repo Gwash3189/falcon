@@ -1,1 +1,2 @@
-// @falcon/sdk-node — Node.js SDK
+export type { EvaluateOptions, FalconClient, FalconClientOptions } from './client.js';
+export { createFalconClient } from './client.js';

@@ -1,2 +1,6 @@
-export { parseEnv } from './config.js';
 export type { AppConfig } from './config.js';
+export { parseEnv } from './config.js';
+export type { ErrorCode } from './errors.js';
+export { ERROR_CODES } from './errors.js';
+export type { FlagType } from './flag-types.js';
+export { FLAG_TYPES } from './flag-types.js';

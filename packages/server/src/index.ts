@@ -1,11 +1,25 @@
-import { serve } from '@hono/node-server';
 import { parseEnv } from '@falcon/shared';
-import { createDb } from './db/connection.js';
+import { serve } from '@hono/node-server';
+import { Redis } from 'ioredis';
 import { createApp } from './app.js';
+import { createDb } from './db/connection.js';
+import { createAuditQueue } from './queue/client.js';
+import { createAuditWorker } from './queue/worker.js';
 
 const config = parseEnv();
+
 const db = createDb(config.DATABASE_URL);
-const app = createApp({ db });
+const redis = new Redis(config.REDIS_URL);
+
+// BullMQ gets its own connection via URL to avoid ioredis version conflicts
+const queue = createAuditQueue(config.REDIS_URL);
+const worker = createAuditWorker(config.REDIS_URL, db);
+
+worker.on('failed', (job, err) => {
+  console.error(`audit-log job ${job?.id} failed:`, err.message);
+});
+
+const app = createApp({ db, redis, queue });
 
 serve({ fetch: app.fetch, port: config.PORT }, () => {
   console.log(`falcon server listening on :${config.PORT}`);

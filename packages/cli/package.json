@@ -1,15 +1,30 @@
 {
   "name": "@falcon/cli",
   "version": "0.1.0",
+  "description": "Falcon feature flag service CLI",
   "type": "module",
-  "dependencies": {
-    "@falcon/shared": "workspace:*"
+  "bin": {
+    "falcon": "./src/index.ts"
+  },
+  "oclif": {
+    "bin": "falcon",
+    "dirname": "falcon",
+    "commands": "./src/commands",
+    "topicSeparator": ":"
   },
   "scripts": {
+    "dev": "node --import tsx/esm src/index.ts",
     "build": "unbuild",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@falcon/shared": "workspace:*",
+    "@oclif/core": "^4.8.3"
+  },
   "devDependencies": {
-    "typescript": "^5.8.0"
+    "@types/node": "^22.19.15",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "unbuild": "^3.5.0"
   }
 }
