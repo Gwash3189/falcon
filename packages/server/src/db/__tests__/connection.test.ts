@@ -4,7 +4,7 @@ import { checkDatabase } from '../health.js';
 
 describe('checkDatabase', () => {
   it('returns true when database is reachable', async () => {
-    const url = process.env['DATABASE_URL'];
+    const url = process.env.DATABASE_URL;
     if (!url) {
       throw new Error('DATABASE_URL environment variable is required for this test');
     }
