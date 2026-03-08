@@ -1,0 +1,15 @@
+{
+  "name": "@falcon/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@falcon/shared": "workspace:*"
+  },
+  "scripts": {
+    "build": "unbuild",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

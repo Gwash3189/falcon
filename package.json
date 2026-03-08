@@ -1,0 +1,19 @@
+{
+  "name": "falcon",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "predev": "[ -f .env ] || cp .env.example .env",
+    "dev": "podman compose up -d 2>/dev/null || docker compose up -d && pnpm --filter @falcon/server dev",
+    "dev:down": "podman compose down 2>/dev/null || docker compose down",
+    "build": "pnpm -r --filter './packages/*' build",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome format . --write",
+    "typecheck": "pnpm -r exec tsc --noEmit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "vitest": "^3.0.0"
+  }
+}
