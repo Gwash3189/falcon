@@ -1,7 +1,14 @@
 import { Hono } from 'hono';
 import type { Db } from '../db/connection.js';
+import type { ApiKey } from '../db/schema/index.js';
 import { createApiKey, listApiKeys, revokeApiKey } from '../services/api-keys.js';
 import { getEnvironment } from '../services/environments.js';
+
+/** Strip the internal hash before sending to the client. */
+function sanitizeApiKey(apiKey: ApiKey) {
+  const { keyHash: _keyHash, ...safe } = apiKey;
+  return safe;
+}
 
 export function createApiKeysRouter(db: Db) {
   const router = new Hono();
@@ -12,8 +19,8 @@ export function createApiKeysRouter(db: Db) {
     const env = await getEnvironment(db, envId, projectId);
     if (!env)
       return c.json({ error: { code: 'NOT_FOUND', message: 'Environment not found' } }, 404);
-    const data = await listApiKeys(db, envId);
-    return c.json({ data });
+    const keys = await listApiKeys(db, envId);
+    return c.json({ data: keys.map(sanitizeApiKey) });
   });
 
   router.post('/', async (c) => {
@@ -23,8 +30,9 @@ export function createApiKeysRouter(db: Db) {
     if (!env)
       return c.json({ error: { code: 'NOT_FOUND', message: 'Environment not found' } }, 404);
     const { apiKey, rawKey } = await createApiKey(db, envId);
-    // Return the raw key once — it will not be accessible again
-    return c.json({ data: { ...apiKey, rawKey } }, 201);
+    // Return the raw key once — it will not be accessible again.
+    // The hash is an internal detail and is never sent to clients.
+    return c.json({ data: { ...sanitizeApiKey(apiKey), rawKey } }, 201);
   });
 
   router.delete('/:keyId', async (c) => {

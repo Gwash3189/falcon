@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/connection.js';
+import { isUniqueViolation } from '../db/errors.js';
 import {
   createProject,
   deleteProject,
@@ -43,8 +44,7 @@ export function createProjectsRouter(db: Db) {
       const data = await createProject(db, body);
       return c.json({ data }, 201);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('unique') || msg.includes('duplicate')) {
+      if (isUniqueViolation(err)) {
         return c.json(
           { error: { code: 'CONFLICT', message: 'A project with that slug already exists' } },
           409,
@@ -72,8 +72,7 @@ export function createProjectsRouter(db: Db) {
       if (!data) return c.json({ error: { code: 'NOT_FOUND', message: 'Project not found' } }, 404);
       return c.json({ data });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('unique') || msg.includes('duplicate')) {
+      if (isUniqueViolation(err)) {
         return c.json(
           { error: { code: 'CONFLICT', message: 'A project with that slug already exists' } },
           409,

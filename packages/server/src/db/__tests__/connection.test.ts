@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { INTEGRATION } from '../../__tests__/helpers/app.js';
 import { createDb } from '../connection.js';
 import { checkDatabase } from '../health.js';
 
 describe('checkDatabase', () => {
-  it('returns true when database is reachable', async () => {
-    const url = process.env.DATABASE_URL;
-    if (!url) {
-      throw new Error('DATABASE_URL environment variable is required for this test');
-    }
-    const db = createDb(url);
+  it.skipIf(!INTEGRATION)('returns true when database is reachable', async () => {
+    const db = createDb(process.env.DATABASE_URL!);
     const result = await checkDatabase(db);
     expect(result).toBe(true);
   });

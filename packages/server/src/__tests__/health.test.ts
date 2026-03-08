@@ -3,16 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createDb } from '../db/connection.js';
 import type { AuditQueue } from '../queue/client.js';
+import { INTEGRATION } from './helpers/app.js';
 
 // Minimal stubs — health check only needs db
 const fakeRedis = {} as Redis;
 const fakeQueue = { add: async () => {} } as unknown as AuditQueue;
 
 describe('GET /health', () => {
-  it('returns 200 when database is reachable', async () => {
-    const db = createDb(
-      process.env.DATABASE_URL ?? 'postgresql://falcon:falcon@localhost:5432/falcon_dev',
-    );
+  it.skipIf(!INTEGRATION)('returns 200 when database is reachable', async () => {
+    const db = createDb(process.env.DATABASE_URL!);
     const app = createApp({ db, redis: fakeRedis, queue: fakeQueue });
     const res = await app.request('/health');
     expect(res.status).toBe(200);
