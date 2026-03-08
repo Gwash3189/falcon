@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { INTEGRATION, createTestApp, uid } from './helpers/app.js';
+import { createTestApp, INTEGRATION, uid } from './helpers/app.js';
 
 describe.skipIf(!INTEGRATION)('Environments API (integration)', () => {
   let app: ReturnType<typeof createTestApp>['app'];
@@ -62,7 +62,9 @@ describe.skipIf(!INTEGRATION)('Environments API (integration)', () => {
         body: JSON.stringify({ name, slug }),
       });
       expect(res.status).toBe(201);
-      const body = (await res.json()) as { data: { name: string; slug: string; projectId: string } };
+      const body = (await res.json()) as {
+        data: { name: string; slug: string; projectId: string };
+      };
       expect(body.data.name).toBe(name);
       expect(body.data.slug).toBe(slug);
       expect(body.data.projectId).toBe(projectId);

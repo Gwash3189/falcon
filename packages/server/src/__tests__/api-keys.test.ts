@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { INTEGRATION, createTestApp, uid } from './helpers/app.js';
+import { createTestApp, INTEGRATION, uid } from './helpers/app.js';
 
 describe.skipIf(!INTEGRATION)('API Keys (integration)', () => {
   let app: ReturnType<typeof createTestApp>['app'];

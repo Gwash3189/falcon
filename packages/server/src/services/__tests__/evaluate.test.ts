@@ -63,7 +63,12 @@ describe('evaluateFlag — percentage', () => {
   });
 
   it('uses an empty string as identifier when none is provided', () => {
-    const flag = makeFlag({ key: 'my-flag', type: FLAG_TYPES.percentage, enabled: true, percentage: 50 });
+    const flag = makeFlag({
+      key: 'my-flag',
+      type: FLAG_TYPES.percentage,
+      enabled: true,
+      percentage: 50,
+    });
     // Manually compute the expected bucket for empty identifier
     const hash = createHash('sha256').update('my-flag:').digest('hex');
     const bucket = parseInt(hash.slice(0, 8), 16) % 100;
@@ -73,7 +78,12 @@ describe('evaluateFlag — percentage', () => {
 
   it('distributes different identifiers across buckets', () => {
     // With 50%, roughly half of users should be in. We check a known pair.
-    const flag = makeFlag({ key: 'rollout', type: FLAG_TYPES.percentage, enabled: true, percentage: 50 });
+    const flag = makeFlag({
+      key: 'rollout',
+      type: FLAG_TYPES.percentage,
+      enabled: true,
+      percentage: 50,
+    });
     // Just verify that two different identifiers can produce different results (not guaranteed
     // but very likely — if this flakes, pick a different pair).
     const results = new Set([
