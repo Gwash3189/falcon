@@ -13,6 +13,7 @@ export default class FlagsDelete extends Command {
   static override flags = {
     project: Flags.string({ description: 'Project ID', required: true }),
     env: Flags.string({ description: 'Environment ID', required: true }),
+    json: Flags.boolean({ description: 'Output as JSON' }),
   };
 
   override async run() {
@@ -23,6 +24,10 @@ export default class FlagsDelete extends Command {
       `/api/projects/${flags.project}/environments/${flags.env}/flags/${args.key}`,
       { method: 'DELETE' },
     );
+    if (flags.json) {
+      this.log(JSON.stringify({ deleted: true, key: args.key }));
+      return;
+    }
     this.log(`✓ Flag deleted: ${args.key}`);
   }
 }

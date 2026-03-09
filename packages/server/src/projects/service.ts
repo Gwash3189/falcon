@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/connection.js';
+import { isUniqueViolation } from '../db/errors.js';
 import { type NewProject, type Project, projects } from '../db/schema/index.js';
+import { ConflictError } from '../errors.js';
 
 export async function listProjects(db: Db): Promise<Project[]> {
   return db.select().from(projects).orderBy(projects.createdAt);
@@ -20,10 +22,15 @@ export async function createProject(
   db: Db,
   data: Pick<NewProject, 'name' | 'slug'>,
 ): Promise<Project> {
-  const rows = await db.insert(projects).values(data).returning();
-  const row = rows[0];
-  if (!row) throw new Error('Insert did not return a row');
-  return row;
+  try {
+    const rows = await db.insert(projects).values(data).returning();
+    const row = rows[0];
+    if (!row) throw new Error('Insert did not return a row');
+    return row;
+  } catch (err) {
+    if (isUniqueViolation(err)) throw new ConflictError('A project with that slug already exists');
+    throw err;
+  }
 }
 
 export async function updateProject(
@@ -31,12 +38,17 @@ export async function updateProject(
   id: string,
   data: { name?: string; slug?: string },
 ): Promise<Project | null> {
-  const rows = await db
-    .update(projects)
-    .set({ ...data, updatedAt: new Date() })
-    .where(eq(projects.id, id))
-    .returning();
-  return rows[0] ?? null;
+  try {
+    const rows = await db
+      .update(projects)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return rows[0] ?? null;
+  } catch (err) {
+    if (isUniqueViolation(err)) throw new ConflictError('A project with that slug already exists');
+    throw err;
+  }
 }
 
 export async function deleteProject(db: Db, id: string): Promise<boolean> {

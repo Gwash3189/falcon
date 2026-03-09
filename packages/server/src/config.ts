@@ -1,3 +1,4 @@
+import { config as _config } from 'dotenv';
 import { z } from 'zod';
 
 const envSchema = z.object({
@@ -9,7 +10,8 @@ const envSchema = z.object({
 
 export type AppConfig = z.infer<typeof envSchema>;
 
-export function parseEnv(env: NodeJS.ProcessEnv = process.env): AppConfig {
+export function config(): AppConfig {
+  const env = _config({ path: '../../../.env', quiet: true });
   const result = envSchema.safeParse(env);
   if (!result.success) {
     throw new Error(`Invalid environment variables:\n${result.error.message}`);

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TtlCache } from '../cache.js';
 
 describe('TtlCache', () => {
@@ -7,32 +7,17 @@ describe('TtlCache', () => {
     expect(cache.get('missing')).toBeUndefined();
   });
 
-  it('returns the value for a key that was set', () => {
+  it('returns the stored value for a key that was set', () => {
     const cache = new TtlCache<string>(1000);
     cache.set('key', 'value');
     expect(cache.get('key')).toBe('value');
   });
 
-  it('returns undefined for an expired entry', () => {
-    vi.useFakeTimers();
-    const cache = new TtlCache<string>(500);
-    cache.set('key', 'value');
-
-    vi.advanceTimersByTime(501);
-    expect(cache.get('key')).toBeUndefined();
-
-    vi.useRealTimers();
-  });
-
-  it('returns the value when the TTL has not yet expired', () => {
-    vi.useFakeTimers();
-    const cache = new TtlCache<string>(500);
-    cache.set('key', 'value');
-
-    vi.advanceTimersByTime(499);
-    expect(cache.get('key')).toBe('value');
-
-    vi.useRealTimers();
+  it('overwrites an existing key with a new value', () => {
+    const cache = new TtlCache<string>(1000);
+    cache.set('key', 'first');
+    cache.set('key', 'second');
+    expect(cache.get('key')).toBe('second');
   });
 
   it('deletes a key explicitly', () => {
@@ -64,10 +49,22 @@ describe('TtlCache', () => {
     expect(cache.get('off')).toBe(false);
   });
 
-  it('overwrites an existing key with a new value', () => {
-    const cache = new TtlCache<string>(1000);
-    cache.set('key', 'first');
-    cache.set('key', 'second');
-    expect(cache.get('key')).toBe('second');
+  describe('when TTL is configured', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('returns undefined after the TTL has elapsed', () => {
+      const cache = new TtlCache<string>(500);
+      cache.set('key', 'value');
+      vi.advanceTimersByTime(501);
+      expect(cache.get('key')).toBeUndefined();
+    });
+
+    it('returns the value before the TTL has elapsed', () => {
+      const cache = new TtlCache<string>(500);
+      cache.set('key', 'value');
+      vi.advanceTimersByTime(499);
+      expect(cache.get('key')).toBe('value');
+    });
   });
 });

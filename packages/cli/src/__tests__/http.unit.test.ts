@@ -20,7 +20,7 @@ describe('apiFetch', () => {
     vi.unstubAllGlobals();
   });
 
-  it('sends Authorization Bearer header', async () => {
+  it('sends the Authorization Bearer header', async () => {
     vi.mocked(fetch).mockResolvedValue(makeResponse(200, { data: [] }));
     await apiFetch(mockConfig, '/api/projects');
     expect(fetch).toHaveBeenCalledWith(
@@ -33,7 +33,7 @@ describe('apiFetch', () => {
     );
   });
 
-  it('sends Content-Type application/json header', async () => {
+  it('sends Content-Type application/json', async () => {
     vi.mocked(fetch).mockResolvedValue(makeResponse(200, { data: { id: '1' } }));
     await apiFetch(mockConfig, '/api/projects', {
       method: 'POST',
@@ -49,7 +49,7 @@ describe('apiFetch', () => {
     );
   });
 
-  it('returns data field from successful response', async () => {
+  it('returns the data field from a successful response', async () => {
     const payload = { id: '1', name: 'My Project', slug: 'my-project' };
     vi.mocked(fetch).mockResolvedValue(makeResponse(200, { data: payload }));
     const result = await apiFetch<typeof payload>(mockConfig, '/api/projects/1');
@@ -62,30 +62,32 @@ describe('apiFetch', () => {
     expect(result).toBeUndefined();
   });
 
-  it('throws ApiResponseError on error response', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      makeResponse(404, { error: { code: 'NOT_FOUND', message: 'Flag not found' } }),
-    );
-    await expect(apiFetch(mockConfig, '/api/flags/missing')).rejects.toThrow(ApiResponseError);
-  });
-
-  it('ApiResponseError carries code and status', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      makeResponse(409, { error: { code: 'CONFLICT', message: 'Slug already taken' } }),
-    );
-    const err = (await apiFetch(mockConfig, '/api/projects', { method: 'POST' }).catch(
-      (e: unknown) => e,
-    )) as ApiResponseError;
-    expect(err).toBeInstanceOf(ApiResponseError);
-    expect(err.code).toBe('CONFLICT');
-    expect(err.status).toBe(409);
-    expect(err.message).toBe('Slug already taken');
-  });
-
-  it('trims trailing slash from serverUrl', async () => {
+  it('trims a trailing slash from serverUrl', async () => {
     const configWithSlash = { serverUrl: 'http://localhost:3000/', apiKey: 'flk_test' };
     vi.mocked(fetch).mockResolvedValue(makeResponse(200, { data: [] }));
     await apiFetch(configWithSlash, '/api/projects');
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/projects', expect.anything());
+  });
+
+  describe('when the server returns an error response', () => {
+    it('throws ApiResponseError', async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        makeResponse(404, { error: { code: 'NOT_FOUND', message: 'Flag not found' } }),
+      );
+      await expect(apiFetch(mockConfig, '/api/flags/missing')).rejects.toThrow(ApiResponseError);
+    });
+
+    it('ApiResponseError carries the error code and status', async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        makeResponse(409, { error: { code: 'CONFLICT', message: 'Slug already taken' } }),
+      );
+      const err = (await apiFetch(mockConfig, '/api/projects', { method: 'POST' }).catch(
+        (e: unknown) => e,
+      )) as ApiResponseError;
+      expect(err).toBeInstanceOf(ApiResponseError);
+      expect(err.code).toBe('CONFLICT');
+      expect(err.status).toBe(409);
+      expect(err.message).toBe('Slug already taken');
+    });
   });
 });

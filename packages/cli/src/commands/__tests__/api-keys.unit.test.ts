@@ -37,16 +37,16 @@ function captureOutput(): { lines: () => string } {
   return { lines: () => logs.join('\n') };
 }
 
-beforeEach(() => {
-  mockRequireConfig.mockResolvedValue(mockConfig);
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
-});
-
 describe('api-keys:create', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls POST to the correct endpoint', async () => {
     mockApiFetch.mockResolvedValue({
       id: 'key-uuid',
@@ -112,6 +112,15 @@ describe('api-keys:create', () => {
 });
 
 describe('api-keys:revoke', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls DELETE on the correct endpoint', async () => {
     mockApiFetch.mockResolvedValue(undefined);
     const out = captureOutput();

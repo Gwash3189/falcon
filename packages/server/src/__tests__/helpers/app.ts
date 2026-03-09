@@ -10,10 +10,7 @@ import type { Redis } from 'iovalkey';
 import { createApp } from '../../app.js';
 import { createDb } from '../../db/connection.js';
 import type { AuditQueue } from '../../queue/client.js';
-
-export const DATABASE_URL = process.env.DATABASE_URL;
-
-export const INTEGRATION = DATABASE_URL !== undefined;
+import { DATABASE_URL } from '../config.js';
 
 export const stubRedis = {
   get: async () => null,

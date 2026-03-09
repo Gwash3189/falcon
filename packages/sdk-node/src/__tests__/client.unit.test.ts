@@ -12,19 +12,22 @@ function mockFetch(response: { ok: boolean; body: unknown }) {
 }
 
 describe('createFalconClient', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', undefined);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   describe('evaluate', () => {
+    beforeEach(() => {
+      vi.stubGlobal('fetch', undefined);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
     it('returns true when the server says the flag is enabled', async () => {
       vi.stubGlobal(
         'fetch',
-        mockFetch({ ok: true, body: { data: { flag_key: 'my-flag', enabled: true } } }),
+        mockFetch({
+          ok: true,
+          body: { data: { flag_key: 'my-flag', enabled: true } },
+        }),
       );
 
       const client = createFalconClient({ baseUrl: BASE_URL, apiKey: API_KEY });
@@ -35,7 +38,10 @@ describe('createFalconClient', () => {
     it('returns false when the server says the flag is disabled', async () => {
       vi.stubGlobal(
         'fetch',
-        mockFetch({ ok: true, body: { data: { flag_key: 'my-flag', enabled: false } } }),
+        mockFetch({
+          ok: true,
+          body: { data: { flag_key: 'my-flag', enabled: false } },
+        }),
       );
 
       const client = createFalconClient({ baseUrl: BASE_URL, apiKey: API_KEY });
@@ -60,7 +66,7 @@ describe('createFalconClient', () => {
       await client.evaluate('my-flag');
 
       const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-      expect((init.headers as Record<string, string>)['Authorization']).toBe(`Bearer ${API_KEY}`);
+      expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${API_KEY}`);
     });
 
     it('sends flag_key and identifier in the request body', async () => {
@@ -130,7 +136,10 @@ describe('createFalconClient', () => {
       });
       vi.stubGlobal('fetch', fetchMock);
 
-      const client = createFalconClient({ baseUrl: 'http://localhost:3000/', apiKey: API_KEY });
+      const client = createFalconClient({
+        baseUrl: 'http://localhost:3000/',
+        apiKey: API_KEY,
+      });
       await client.evaluate('f');
 
       const [url] = fetchMock.mock.calls[0] as [string];

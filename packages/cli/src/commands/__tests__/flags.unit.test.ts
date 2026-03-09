@@ -39,20 +39,16 @@ function captureOutput(): { lines: () => string } {
   return { lines: () => logs.join('\n') };
 }
 
-beforeEach(() => {
-  mockRequireConfig.mockResolvedValue(mockConfig);
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
-});
-
-// ---------------------------------------------------------------------------
-// flags:create
-// ---------------------------------------------------------------------------
-
 describe('flags:create', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('creates a boolean flag and calls the correct endpoint', async () => {
     mockApiFetch.mockResolvedValue({ id: '1', key: 'dark-mode', type: 'boolean', enabled: false });
     captureOutput();
@@ -217,11 +213,16 @@ describe('flags:create', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// flags:list
-// ---------------------------------------------------------------------------
-
 describe('flags:list', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls GET /flags endpoint for the given environment', async () => {
     mockApiFetch.mockResolvedValue([]);
     captureOutput();
@@ -303,11 +304,16 @@ describe('flags:list', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// flags:update
-// ---------------------------------------------------------------------------
-
 describe('flags:update', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('enables a flag with --enabled', async () => {
     mockApiFetch.mockResolvedValue({ id: '1', key: 'dark-mode', type: 'boolean', enabled: true });
     captureOutput();
@@ -374,11 +380,16 @@ describe('flags:update', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// flags:delete
-// ---------------------------------------------------------------------------
-
 describe('flags:delete', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls DELETE on the correct endpoint', async () => {
     mockApiFetch.mockResolvedValue(undefined);
     const out = captureOutput();

@@ -37,16 +37,16 @@ function captureOutput(): { lines: () => string } {
   return { lines: () => logs.join('\n') };
 }
 
-beforeEach(() => {
-  mockRequireConfig.mockResolvedValue(mockConfig);
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
-});
-
 describe('projects:list', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls GET /api/projects', async () => {
     mockApiFetch.mockResolvedValue([]);
     captureOutput();
@@ -95,6 +95,15 @@ describe('projects:list', () => {
 });
 
 describe('projects:create', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls POST /api/projects with name and slug', async () => {
     mockApiFetch.mockResolvedValue({ id: 'proj-uuid', name: 'My App', slug: 'my-app' });
     captureOutput();

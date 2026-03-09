@@ -37,16 +37,16 @@ function captureOutput(): { lines: () => string } {
   return { lines: () => logs.join('\n') };
 }
 
-beforeEach(() => {
-  mockRequireConfig.mockResolvedValue(mockConfig);
-});
-
-afterEach(() => {
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
-});
-
 describe('environments:list', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls GET /api/projects/:projectId/environments', async () => {
     mockApiFetch.mockResolvedValue([]);
     captureOutput();
@@ -93,6 +93,15 @@ describe('environments:list', () => {
 });
 
 describe('environments:create', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it('calls POST /api/projects/:projectId/environments with name and slug', async () => {
     mockApiFetch.mockResolvedValue({
       id: 'env-uuid',
