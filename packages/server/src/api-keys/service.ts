@@ -1,55 +1,27 @@
-import { and, eq, isNull } from "drizzle-orm";
-import type { Db } from "../db/connection.js";
-import { type ApiKey, apiKeys } from "../db/schema/index.js";
-import { generateApiKey } from "./hash.js";
+import { createDb } from '../db/connection.js';
+import { createApiKeyCommand } from './commands/create_api_key.js';
+import { listApiKeysCommand } from './commands/list_api_keys.js';
+import { revokeApiKeyCommand } from './commands/revoke_api_key.js';
 
-export interface CreatedApiKey {
-  apiKey: ApiKey;
-  rawKey: string;
+export type { CreatedApiKey } from './commands/create_api_key.js';
+
+export async function listApiKeys(environmentId: string) {
+  return listApiKeysCommand({
+    dependencies: { db: createDb() },
+    params: { environmentId },
+  });
 }
 
-export async function listApiKeys(
-  db: Db,
-  environmentId: string,
-): Promise<ApiKey[]> {
-  return db
-    .select()
-    .from(apiKeys)
-    .where(
-      and(eq(apiKeys.environmentId, environmentId), isNull(apiKeys.revokedAt)),
-    )
-    .orderBy(apiKeys.createdAt);
+export async function createApiKey(environmentId: string) {
+  return createApiKeyCommand({
+    dependencies: { db: createDb() },
+    params: { environmentId },
+  });
 }
 
-export async function createApiKey(
-  db: Db,
-  environmentId: string,
-): Promise<CreatedApiKey> {
-  const { rawKey, keyHash, keyPrefix } = generateApiKey();
-  const rows = await db
-    .insert(apiKeys)
-    .values({ environmentId, keyHash, keyPrefix })
-    .returning();
-  const apiKey = rows[0];
-  if (!apiKey) throw new Error("Insert did not return a row");
-  return { apiKey, rawKey };
-}
-
-export async function revokeApiKey(
-  db: Db,
-  id: string,
-  environmentId: string,
-): Promise<boolean> {
-  const result = await db
-    .update(apiKeys)
-    .set({ revokedAt: new Date() })
-    .where(
-      and(
-        eq(apiKeys.id, id),
-        eq(apiKeys.environmentId, environmentId),
-        isNull(apiKeys.revokedAt),
-      ),
-    )
-    .returning({ id: apiKeys.id });
-  return result.length > 0;
+export async function revokeApiKey(id: string, environmentId: string) {
+  return revokeApiKeyCommand({
+    dependencies: { db: createDb() },
+    params: { id, environmentId },
+  });
 }

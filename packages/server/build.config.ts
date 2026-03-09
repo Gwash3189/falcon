@@ -1,7 +1,7 @@
-import { defineBuildConfig } from "unbuild";
+import { defineBuildConfig } from 'unbuild';
 
 export default defineBuildConfig({
-  entries: ["src/index"],
+  entries: ['src/index'],
   declaration: true,
   clean: true,
   rollup: {
@@ -9,12 +9,12 @@ export default defineBuildConfig({
     inlineDependencies: true,
   },
   externals: [
-    "hono",
-    "@hono/node-server",
-    "drizzle-orm",
-    "drizzle-orm/postgres-js",
-    "postgres",
-    "zod",
-    "iovalkey",
+    'hono',
+    '@hono/node-server',
+    'drizzle-orm',
+    'drizzle-orm/postgres-js',
+    'postgres',
+    'zod',
+    'iovalkey',
   ],
 });

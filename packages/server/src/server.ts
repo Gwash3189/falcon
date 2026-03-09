@@ -1,9 +1,9 @@
-import { Redis } from "iovalkey";
-import { createApp } from "./app.js";
-import { config } from "./config.js";
-import { createDb } from "./db/connection.js";
-import { createAuditQueue } from "./queue/client.js";
-import { createAuditWorker } from "./queue/worker.js";
+import { Redis } from 'iovalkey';
+import { createApp } from './app.js';
+import { config } from './config.js';
+import { createDb } from './db/connection.js';
+import { createAuditQueue } from './queue/client.js';
+import { createAuditWorker } from './queue/worker.js';
 
 export function createServer() {
   const { DATABASE_URL, VALKEY_URL } = config();

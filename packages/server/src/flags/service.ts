@@ -1,121 +1,59 @@
-import { and, eq } from "drizzle-orm";
-import type { Db } from "../db/connection.js";
-import { isUniqueViolation } from "../db/errors.js";
-import { type Flag, flags, type NewFlag } from "../db/schema/index.js";
-import { ConflictError } from "../errors.js";
-import type { AuditQueue } from "../queue/client.js";
+import { config } from '../config.js';
+import { createDb } from '../db/connection.js';
+import type { NewFlag } from '../db/schema/index.js';
+import { type AuditQueue, createAuditQueue } from '../queue/client.js';
+import { createFlagCommand } from './commands/create_flag.js';
+import { deleteFlagCommand } from './commands/delete_flag.js';
+import { getFlagByKeyCommand } from './commands/get_flag_by_key.js';
+import { listFlagsCommand } from './commands/list_flags.js';
+import { updateFlagCommand } from './commands/update_flag.js';
 
-export async function listFlags(
-  db: Db,
-  environmentId: string,
-): Promise<Flag[]> {
-  return db
-    .select()
-    .from(flags)
-    .where(eq(flags.environmentId, environmentId))
-    .orderBy(flags.createdAt);
+let _queue: AuditQueue | undefined;
+function getQueue(): AuditQueue {
+  if (!_queue) _queue = createAuditQueue(config().VALKEY_URL);
+  return _queue;
 }
 
-export async function getFlagByKey(
-  db: Db,
-  environmentId: string,
-  key: string,
-): Promise<Flag | null> {
-  const [row] = await db
-    .select()
-    .from(flags)
-    .where(and(eq(flags.environmentId, environmentId), eq(flags.key, key)))
-    .limit(1);
-  return row ?? null;
+export async function listFlags(environmentId: string) {
+  return listFlagsCommand({
+    dependencies: { db: createDb() },
+    params: { environmentId },
+  });
+}
+
+export async function getFlagByKey(environmentId: string, key: string) {
+  return getFlagByKeyCommand({
+    dependencies: { db: createDb() },
+    params: { environmentId, key },
+  });
 }
 
 export async function createFlag(
-  db: Db,
-  queue: AuditQueue,
   environmentId: string,
-  data: Pick<
-    NewFlag,
-    "key" | "type" | "enabled" | "percentage" | "identifiers"
-  >,
+  data: Pick<NewFlag, 'key' | 'type' | 'enabled' | 'percentage' | 'identifiers'>,
   actor: string | null = null,
-): Promise<Flag> {
-  let rows: Flag[];
-  try {
-    rows = await db
-      .insert(flags)
-      .values({ ...data, environmentId })
-      .returning();
-  } catch (err) {
-    if (isUniqueViolation(err))
-      throw new ConflictError(
-        "A flag with that key already exists in this environment",
-      );
-    throw err;
-  }
-  const row = rows[0];
-  if (!row) throw new Error("Insert did not return a row");
-  await queue.add("audit-log", {
-    flagId: row.id,
-    environmentId,
-    action: "created",
-    actor,
-    beforeState: null,
-    afterState: row,
+) {
+  return createFlagCommand({
+    dependencies: { db: createDb(), queue: getQueue() },
+    params: { environmentId, data, actor },
   });
-  return row;
 }
 
 export async function updateFlag(
-  db: Db,
-  queue: AuditQueue,
   environmentId: string,
   key: string,
-  data: Partial<Pick<NewFlag, "enabled" | "percentage" | "identifiers">>,
+  data: Partial<Pick<NewFlag, 'enabled' | 'percentage' | 'identifiers'>>,
   actor: string | null = null,
-): Promise<Flag | null> {
-  const existing = await getFlagByKey(db, environmentId, key);
-  if (!existing) return null;
-
-  const rows = await db
-    .update(flags)
-    .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(flags.environmentId, environmentId), eq(flags.key, key)))
-    .returning();
-  const row = rows[0];
-  if (!row) return null;
-
-  await queue.add("audit-log", {
-    flagId: row.id,
-    environmentId,
-    action: "updated",
-    actor,
-    beforeState: existing,
-    afterState: row,
+) {
+  return updateFlagCommand({
+    dependencies: { db: createDb(), queue: getQueue() },
+    params: { environmentId, key, data, actor },
   });
-  return row;
 }
 
-export async function deleteFlag(
-  db: Db,
-  queue: AuditQueue,
-  environmentId: string,
-  key: string,
-  actor: string | null = null,
-): Promise<boolean> {
-  const existing = await getFlagByKey(db, environmentId, key);
-  if (!existing) return false;
-
-  await db
-    .delete(flags)
-    .where(and(eq(flags.environmentId, environmentId), eq(flags.key, key)));
-
-  await queue.add("audit-log", {
-    flagId: existing.id,
-    environmentId,
-    action: "deleted",
-    actor,
-    beforeState: existing,
-    afterState: null,
+export async function deleteFlag(environmentId: string, key: string, actor: string | null = null) {
+  return deleteFlagCommand({
+    dependencies: { db: createDb(), queue: getQueue() },
+    params: { environmentId, key, actor },
   });
-  return true;
 }

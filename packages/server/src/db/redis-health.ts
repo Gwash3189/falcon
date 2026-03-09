@@ -1,4 +1,4 @@
-import type { Redis } from "iovalkey";
+import type { Redis } from 'iovalkey';
 
 export async function checkRedis(redis: Redis): Promise<boolean> {
   try {

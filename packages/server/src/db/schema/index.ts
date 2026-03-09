@@ -9,5 +9,5 @@ export type {
   NewFlag,
   NewProject,
   Project,
-} from "../schema.js";
-export { apiKeys, auditLog, environments, flags, projects } from "../schema.js";
+} from '../schema.js';
+export { apiKeys, auditLog, environments, flags, projects } from '../schema.js';
