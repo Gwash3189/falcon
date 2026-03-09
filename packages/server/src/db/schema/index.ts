@@ -10,10 +10,4 @@ export type {
   NewProject,
   Project,
 } from '../schema.js';
-export {
-  apiKeys,
-  auditLog,
-  environments,
-  flags,
-  projects,
-} from '../schema.js';
+export { apiKeys, auditLog, environments, flags, projects } from '../schema.js';

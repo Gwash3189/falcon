@@ -1,7 +1,6 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import type { Db } from '../db/connection.js';
 import { createProjectsController } from './controller.js';
 
 const uuidParam = z.object({ id: z.string().uuid() });
@@ -25,9 +24,9 @@ const updateSchema = z.object({
     .optional(),
 });
 
-export function createProjectsRouter(db: Db) {
+export function createProjectsRouter() {
   const router = new Hono();
-  const ctrl = createProjectsController(db);
+  const ctrl = createProjectsController();
 
   router.get('/', ctrl.list);
   router.post('/', zValidator('json', createSchema), ctrl.create);

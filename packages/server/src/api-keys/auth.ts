@@ -17,10 +17,11 @@ declare module 'hono' {
 }
 
 export function apiKeyAuth(db: Db) {
-  return createMiddleware(async (c, next) => {
-    const authorization = c.req.header('Authorization');
+  return createMiddleware(async (context, next) => {
+    const authorization = context.req.header('Authorization');
+
     if (!authorization?.startsWith('Bearer ')) {
-      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing API key' } }, 401);
+      return context.json({ error: { code: 'UNAUTHORIZED', message: 'Missing API key' } }, 401);
     }
 
     const rawKey = authorization.slice(7);
@@ -29,13 +30,21 @@ export function apiKeyAuth(db: Db) {
     const [found] = await db.select().from(apiKeys).where(eq(apiKeys.keyHash, keyHash)).limit(1);
 
     if (!found || found.revokedAt !== null) {
-      return c.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Invalid or revoked API key' } },
+      return context.json(
+        {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Invalid or revoked API key',
+          },
+        },
         401,
       );
     }
 
-    c.set('auth', { environmentId: found.environmentId, keyPrefix: found.keyPrefix });
+    context.set('auth', {
+      environmentId: found.environmentId,
+      keyPrefix: found.keyPrefix,
+    });
     await next();
   });
 }

@@ -15,6 +15,12 @@ pnpm --filter @falcon/server test  # single package
 
 Tests that need Postgres use a real database via container. No mocking the database layer.
 
+## Test Configuration
+
+Integration tests load `.env` from the repo root via `dotenv`. The config is validated by `parseEnv()` from `@falcon/shared`.
+
+Tests import `DATABASE_URL` and `VALKEY_URL` from `packages/server/src/__tests__/config.ts` — never access `process.env` directly.
+
 ## Adding a New Package
 
 1. Create `packages/<name>/` with its own `package.json` (`"type": "module"`)

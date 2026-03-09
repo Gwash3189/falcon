@@ -1,14 +1,13 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import type { Db } from '../db/connection.js';
 import { createApiKeysController } from './controller.js';
 
 const uuidParam = z.object({ keyId: z.string().uuid() });
 
-export function createApiKeysRouter(db: Db) {
+export function createApiKeysRouter() {
   const router = new Hono();
-  const ctrl = createApiKeysController(db);
+  const ctrl = createApiKeysController();
 
   router.get('/', ctrl.list);
   router.post('/', ctrl.create);

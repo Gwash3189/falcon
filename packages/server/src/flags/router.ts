@@ -2,8 +2,6 @@ import { FLAG_TYPES } from '@falcon/shared';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import type { Db } from '../db/connection.js';
-import type { AuditQueue } from '../queue/client.js';
 import { createFlagsController } from './controller.js';
 
 const flagKeyParam = z.object({
@@ -43,9 +41,9 @@ const updateSchema = z.object({
   identifiers: z.array(z.string().min(1)).min(1).optional(),
 });
 
-export function createFlagsRouter(db: Db, queue: AuditQueue) {
+export function createFlagsRouter() {
   const router = new Hono();
-  const ctrl = createFlagsController(db, queue);
+  const ctrl = createFlagsController();
 
   router.get('/', ctrl.list);
   router.post('/', zValidator('json', createSchema), ctrl.create);
