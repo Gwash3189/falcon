@@ -3,8 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "@falcon/shared": ["../shared/src/index.ts"]
-    }
+      "@falcon/shared": ["../shared/src/index.ts"],
+    },
   },
-  "include": ["src"]
+  "include": ["src", "../shared/src/command.ts"],
 }

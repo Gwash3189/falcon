@@ -1,10 +1,10 @@
 import type { Redis } from 'iovalkey';
+import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createDb } from '../db/connection.js';
 import type { AuditQueue } from '../queue/client.js';
 import { DATABASE_URL } from './config.js';
-import { uid } from './helpers/app.js';
 
 const stubQueue = { add: async () => {} } as unknown as AuditQueue;
 
@@ -43,7 +43,7 @@ describe('Evaluate API', () => {
     const projRes = await baseApp.request('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Project'), slug: uid('proj') }),
+      body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const projBody = (await projRes.json()) as { data: { id: string } };
     projectId = projBody.data.id;
@@ -51,7 +51,7 @@ describe('Evaluate API', () => {
     const envRes = await baseApp.request(`/api/projects/${projectId}/environments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Env'), slug: uid('env') }),
+      body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const envBody = (await envRes.json()) as { data: { id: string } };
     envId = envBody.data.id;

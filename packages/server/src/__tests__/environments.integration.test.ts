@@ -1,5 +1,6 @@
+import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApp, uid } from './helpers/app.js';
+import { createTestApp } from './helpers/app.js';
 
 describe('Environments API', () => {
   let app: ReturnType<typeof createTestApp>['app'];
@@ -11,8 +12,9 @@ describe('Environments API', () => {
     const res = await app.request('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Project'), slug: uid('proj') }),
+      body: JSON.stringify({ name: 'test', slug: 'test' }),
     });
+
     const body = (await res.json()) as { data: { id: string } };
     projectId = body.data.id;
   });
@@ -26,7 +28,7 @@ describe('Environments API', () => {
     return envId ? `${base}/${envId}` : base;
   }
 
-  async function createEnv(name = uid('Env'), slug = uid('env')) {
+  async function createEnv(name = uuidv7(), slug = uuidv7()) {
     const res = await app.request(envUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -40,9 +42,15 @@ describe('Environments API', () => {
 
   describe('GET /…/environments', () => {
     describe('when the project exists', () => {
-      it('returns 200 with an array', async () => {
+      it('returns 200', async () => {
         const res = await app.request(envUrl());
         expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: unknown[] };
+        expect(Array.isArray(body.data)).toBe(true);
+      });
+
+      it('returns the environment', async () => {
+        const res = await app.request(envUrl());
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);
       });
@@ -61,8 +69,8 @@ describe('Environments API', () => {
   describe('POST /…/environments', () => {
     describe('when the request is valid', () => {
       it('returns 201 with the created environment', async () => {
-        const name = uid('Env');
-        const slug = uid('env');
+        const name = uuidv7();
+        const slug = uuidv7();
         const res = await app.request(envUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,14 +88,14 @@ describe('Environments API', () => {
 
     describe('when the slug is already taken', () => {
       it('returns 409 with CONFLICT error code', async () => {
-        const slug = uid('env');
-        const { res: first } = await createEnv(uid('Env'), slug);
+        const slug = uuidv7();
+        const { res: first } = await createEnv(uuidv7(), slug);
         expect(first.status).toBe(201);
 
         const second = await app.request(envUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: uid('Other'), slug }),
+          body: JSON.stringify({ name: 'test', slug }),
         });
         expect(second.status).toBe(409);
         const body = (await second.json()) as { error: { code: string } };
@@ -100,7 +108,7 @@ describe('Environments API', () => {
         const res = await app.request(envUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: uid('Env') }),
+          body: JSON.stringify({ name: uuidv7() }),
         });
         expect(res.status).toBe(400);
       });
@@ -113,7 +121,7 @@ describe('Environments API', () => {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'X', slug: uid('env') }),
+            body: JSON.stringify({ name: 'X', slug: uuidv7() }),
           },
         );
         expect(res.status).toBe(404);

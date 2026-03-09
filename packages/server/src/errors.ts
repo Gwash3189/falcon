@@ -11,24 +11,24 @@ export class AppError extends Error {
 
 export class NotFoundError extends AppError {
   constructor(message: string) {
-    super('NOT_FOUND', 404, message);
+    super("NOT_FOUND", 404, message);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super('CONFLICT', 409, message);
+    super("CONFLICT", 409, message);
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor(message: string) {
-    super('UNAUTHORIZED', 401, message);
+    super("UNAUTHORIZED", 401, message);
   }
 }
 
 export class BadRequestError extends AppError {
   constructor(message: string) {
-    super('BAD_REQUEST', 400, message);
+    super("BAD_REQUEST", 400, message);
   }
 }

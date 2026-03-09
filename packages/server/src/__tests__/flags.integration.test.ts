@@ -1,5 +1,6 @@
+import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApp, uid } from './helpers/app.js';
+import { createTestApp } from './helpers/app.js';
 
 describe('Flags API', () => {
   let app: ReturnType<typeof createTestApp>['app'];
@@ -12,7 +13,7 @@ describe('Flags API', () => {
     const projRes = await app.request('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Project'), slug: uid('proj') }),
+      body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const projBody = (await projRes.json()) as { data: { id: string } };
     projectId = projBody.data.id;
@@ -20,7 +21,7 @@ describe('Flags API', () => {
     const envRes = await app.request(`/api/projects/${projectId}/environments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Env'), slug: uid('env') }),
+      body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const envBody = (await envRes.json()) as { data: { id: string } };
     envId = envBody.data.id;
@@ -35,7 +36,7 @@ describe('Flags API', () => {
     return flagKey ? `${base}/${flagKey}` : base;
   }
 
-  async function createBooleanFlag(key = uid('flag')) {
+  async function createBooleanFlag(key = uuidv7()) {
     const res = await app.request(flagUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -68,7 +69,7 @@ describe('Flags API', () => {
   describe('POST /…/flags', () => {
     describe('when the request is valid', () => {
       it('creates a boolean flag and returns 201', async () => {
-        const key = uid('flag');
+        const key = uuidv7();
         const res = await app.request(flagUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -88,7 +89,7 @@ describe('Flags API', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            key: uid('flag'),
+            key: uuidv7(),
             type: 'percentage',
             percentage: 25,
           }),
@@ -103,7 +104,7 @@ describe('Flags API', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            key: uid('flag'),
+            key: uuidv7(),
             type: 'identifier',
             identifiers: ['user-1', 'user-2'],
           }),
@@ -116,7 +117,7 @@ describe('Flags API', () => {
 
     describe('when the flag key already exists in the environment', () => {
       it('returns 409 with CONFLICT error code', async () => {
-        const key = uid('flag');
+        const key = uuidv7();
         const { res: first } = await createBooleanFlag(key);
         expect(first.status).toBe(201);
 
@@ -136,7 +137,7 @@ describe('Flags API', () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: uid('flag'), type: 'percentage' }),
+          body: JSON.stringify({ key: uuidv7(), type: 'percentage' }),
         });
         expect(res.status).toBe(400);
       });
@@ -145,7 +146,7 @@ describe('Flags API', () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: uid('flag'), type: 'identifier' }),
+          body: JSON.stringify({ key: uuidv7(), type: 'identifier' }),
         });
         expect(res.status).toBe(400);
       });
@@ -169,7 +170,7 @@ describe('Flags API', () => {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: uid('flag'), type: 'boolean' }),
+            body: JSON.stringify({ key: uuidv7(), type: 'boolean' }),
           },
         );
         expect(res.status).toBe(404);

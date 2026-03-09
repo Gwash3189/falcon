@@ -1,5 +1,6 @@
+import { uuidv7 } from 'uuidv7';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApp, uid } from './helpers/app.js';
+import { createTestApp } from './helpers/app.js';
 
 describe('Projects API', () => {
   let app: ReturnType<typeof createTestApp>['app'];
@@ -21,14 +22,8 @@ describe('Projects API', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, slug }),
     });
-    if (res.status === 201) {
-      const body = (await res.json()) as {
-        data: { id: string; name: string; slug: string };
-      };
-      created.push(body.data.id);
-      return { res, data: body.data };
-    }
-    return { res, data: null };
+    const json = (await res.json()) as { data?: { id: string; name: string; slug: string } };
+    return { res, data: json.data };
   }
 
   describe('GET /api/projects', () => {
@@ -43,8 +38,8 @@ describe('Projects API', () => {
   describe('POST /api/projects', () => {
     describe('when the request is valid', () => {
       it('returns 201 with the created project', async () => {
-        const name = uid('Project');
-        const slug = uid('proj');
+        const name = uuidv7();
+        const slug = uuidv7();
         const { res, data } = await postProject(name, slug);
         expect(res.status).toBe(201);
         expect(data?.name).toBe(name);
@@ -55,12 +50,12 @@ describe('Projects API', () => {
 
     describe('when the slug is already taken', () => {
       it('returns 409 with CONFLICT error code', async () => {
-        const slug = uid('proj');
-        await postProject(uid('Project'), slug);
+        const slug = uuidv7();
+        await postProject(uuidv7(), slug);
         const res = await app.request('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: uid('Other'), slug }),
+          body: JSON.stringify({ name: uuidv7(), slug }),
         });
         expect(res.status).toBe(409);
         const body = (await res.json()) as { error: { code: string } };
@@ -73,7 +68,7 @@ describe('Projects API', () => {
         const res = await app.request('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug: uid('proj') }),
+          body: JSON.stringify({ slug: uuidv7() }),
         });
         expect(res.status).toBe(400);
       });
@@ -82,7 +77,7 @@ describe('Projects API', () => {
         const res = await app.request('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: uid('Project') }),
+          body: JSON.stringify({ name: uuidv7() }),
         });
         expect(res.status).toBe(400);
       });
@@ -103,7 +98,7 @@ describe('Projects API', () => {
   describe('GET /api/projects/:id', () => {
     describe('when the project exists', () => {
       it('returns 200 with the project', async () => {
-        const { data } = await postProject(uid('Project'), uid('proj'));
+        const { data } = await postProject(uuidv7(), uuidv7());
         const res = await app.request(`/api/projects/${data?.id}`);
         expect(res.status).toBe(200);
         const body = (await res.json()) as {
@@ -127,7 +122,7 @@ describe('Projects API', () => {
   describe('PUT /api/projects/:id', () => {
     describe('when the project exists', () => {
       it('updates and returns the project name', async () => {
-        const { data } = await postProject('Old Name', uid('proj'));
+        const { data } = await postProject('Old Name', uuidv7());
         const res = await app.request(`/api/projects/${data?.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -139,8 +134,8 @@ describe('Projects API', () => {
       });
 
       it('updates and returns the project slug', async () => {
-        const { data } = await postProject(uid('Project'), uid('proj'));
-        const newSlug = uid('proj');
+        const { data } = await postProject(uuidv7(), uuidv7());
+        const newSlug = uuidv7();
         const res = await app.request(`/api/projects/${data?.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -159,6 +154,7 @@ describe('Projects API', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: 'Anything' }),
         });
+
         expect(res.status).toBe(404);
       });
     });
@@ -166,16 +162,24 @@ describe('Projects API', () => {
 
   describe('DELETE /api/projects/:id', () => {
     describe('when the project exists', () => {
-      it('deletes the project and returns 204', async () => {
-        const { data } = await postProject(uid('Project'), uid('proj'));
+      it('returns 204', async () => {
+        const { data } = await postProject(uuidv7(), uuidv7());
         const res = await app.request(`/api/projects/${data?.id}`, {
           method: 'DELETE',
         });
+
         expect(res.status).toBe(204);
-        const idx = created.indexOf(data?.id);
-        if (idx !== -1) created.splice(idx, 1);
-        const getRes = await app.request(`/api/projects/${data?.id}`);
-        expect(getRes.status).toBe(404);
+      });
+
+      it('returns 204', async () => {
+        const { data } = await postProject(uuidv7(), uuidv7());
+
+        await app.request(`/api/projects/${data?.id}`, {
+          method: 'DELETE',
+        });
+
+        const res = await app.request(`/api/projects/${data?.id}`);
+        expect(res.status).toBe(404);
       });
     });
 

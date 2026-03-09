@@ -1,5 +1,6 @@
+import { uuidv7 } from 'uuidv7';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApp, uid } from './helpers/app.js';
+import { createTestApp } from './helpers/app.js';
 
 describe('API Keys', () => {
   let app: ReturnType<typeof createTestApp>['app'];
@@ -12,7 +13,7 @@ describe('API Keys', () => {
     const projRes = await app.request('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Project'), slug: uid('proj') }),
+      body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const projBody = (await projRes.json()) as { data: { id: string } };
     projectId = projBody.data.id;
@@ -20,7 +21,7 @@ describe('API Keys', () => {
     const envRes = await app.request(`/api/projects/${projectId}/environments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: uid('Env'), slug: uid('env') }),
+      body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const envBody = (await envRes.json()) as { data: { id: string } };
     envId = envBody.data.id;

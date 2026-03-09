@@ -1,8 +1,20 @@
-import { createMiddleware } from 'hono/factory';
+import { logger } from "@falcon/shared";
+import { createMiddleware } from "hono/factory";
 
 export const requestLogger = createMiddleware(async (c, next) => {
   const start = Date.now();
+  logger.info("server_request_start", {
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    start,
+  });
   await next();
   const duration = Date.now() - start;
-  console.log(`${c.req.method} ${c.req.path} ${c.res.status} ${duration}ms`);
+  logger.info("server_request_finish", {
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    duration,
+  });
 });

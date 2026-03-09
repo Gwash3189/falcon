@@ -5,7 +5,7 @@
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "dev": "tsx watch",
     "build": "unbuild",
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest run"

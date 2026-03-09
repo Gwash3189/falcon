@@ -31,6 +31,6 @@ export function createTestApp() {
 }
 
 /** Unique slug/key generator to avoid test conflicts. */
-export function uid(prefix = 'test'): string {
+export function uuid(prefix = 'test'): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
