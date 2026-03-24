@@ -90,7 +90,7 @@ packages/
   sdk-node/    # @falcon/sdk-node — lightweight Node.js SDK
 ```
 
-`shared` and `web` are private packages that get inlined at build time. They are never published to npm.
+`shared` is a private package that gets inlined at build time. It is never published to npm.
 
 ## Making Changes
 
