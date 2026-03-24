@@ -10,6 +10,8 @@ import { DATABASE_URL } from './config.js';
 const stubQueue = { add: async () => {} } as unknown as AuditQueue;
 const testAppConfig = { BOOTSTRAP_ADMIN_KEY: 'test-bootstrap-key' };
 
+let sharedDb: ReturnType<typeof createDb>;
+
 function createMockRedis() {
   const store = new Map<string, string>();
   return {
@@ -30,8 +32,7 @@ function createMockRedis() {
 }
 
 function buildApp(redis: Redis) {
-  const db = createDb(DATABASE_URL);
-  return createApp({ db, redis, queue: stubQueue, appConfig: testAppConfig });
+  return createApp({ db: sharedDb, redis, queue: stubQueue, appConfig: testAppConfig });
 }
 
 describe('Evaluate API', () => {
@@ -41,6 +42,8 @@ describe('Evaluate API', () => {
   let userKey: string;
 
   beforeAll(async () => {
+    sharedDb = createDb(DATABASE_URL);
+
     const { rawKey: uk } = await createUserKey(
       `eval-test-${Math.random().toString(36).slice(2)}@example.com`,
     );
@@ -80,19 +83,29 @@ describe('Evaluate API', () => {
     await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
-      body: JSON.stringify({ key: 'pct-flag', type: 'percentage', percentage: 100 }),
+      body: JSON.stringify({ key: 'pct-flag', type: 'percentage', percentage: 100, enabled: true }),
     });
 
     await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
-      body: JSON.stringify({ key: 'pct-flag-zero', type: 'percentage', percentage: 0 }),
+      body: JSON.stringify({
+        key: 'pct-flag-zero',
+        type: 'percentage',
+        percentage: 0,
+        enabled: true,
+      }),
     });
 
     await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
-      body: JSON.stringify({ key: 'id-flag', type: 'identifier', identifiers: ['allowed-user'] }),
+      body: JSON.stringify({
+        key: 'id-flag',
+        type: 'identifier',
+        identifiers: ['allowed-user'],
+        enabled: true,
+      }),
     });
   });
 

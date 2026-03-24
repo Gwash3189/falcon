@@ -4,8 +4,10 @@ import { config } from '../config.js';
 import { createDb } from '../db/connection.js';
 import { userApiKeys } from '../db/schema/index.js';
 
+let _db: ReturnType<typeof createDb> | undefined;
 function db() {
-  return createDb(config().DATABASE_URL);
+  if (!_db) _db = createDb(config().DATABASE_URL);
+  return _db;
 }
 
 export interface CreatedUserKey {
