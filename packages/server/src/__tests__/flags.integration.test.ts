@@ -3,16 +3,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from './helpers/app.js';
 
 describe('Flags API', () => {
-  let app: ReturnType<typeof createTestApp>['app'];
+  let app: Awaited<ReturnType<typeof createTestApp>>['app'];
+  let userKey: string;
   let projectId: string;
   let envId: string;
 
   beforeAll(async () => {
-    ({ app } = createTestApp());
+    ({ app, userKey } = await createTestApp());
 
     const projRes = await app.request('/api/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
       body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const projBody = (await projRes.json()) as { data: { id: string } };
@@ -20,7 +21,7 @@ describe('Flags API', () => {
 
     const envRes = await app.request(`/api/projects/${projectId}/environments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
       body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const envBody = (await envRes.json()) as { data: { id: string } };
@@ -28,7 +29,10 @@ describe('Flags API', () => {
   });
 
   afterAll(async () => {
-    await app.request(`/api/projects/${projectId}`, { method: 'DELETE' });
+    await app.request(`/api/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${userKey}` },
+    });
   });
 
   function flagUrl(flagKey?: string) {
@@ -36,10 +40,14 @@ describe('Flags API', () => {
     return flagKey ? `${base}/${flagKey}` : base;
   }
 
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` };
+  }
+
   async function createBooleanFlag(key = uuidv7()) {
     const res = await app.request(flagUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ key, type: 'boolean', enabled: false }),
     });
     const body = (await res.json()) as { data: { id: string; key: string } };
@@ -49,7 +57,9 @@ describe('Flags API', () => {
   describe('GET /…/flags', () => {
     describe('when the environment exists', () => {
       it('returns 200 with an array', async () => {
-        const res = await app.request(flagUrl());
+        const res = await app.request(flagUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);
@@ -60,6 +70,7 @@ describe('Flags API', () => {
       it('returns 404', async () => {
         const res = await app.request(
           `/api/projects/${projectId}/environments/00000000-0000-0000-0000-000000000000/flags`,
+          { headers: { Authorization: `Bearer ${userKey}` } },
         );
         expect(res.status).toBe(404);
       });
@@ -72,7 +83,7 @@ describe('Flags API', () => {
         const key = uuidv7();
         const res = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ key, type: 'boolean', enabled: true }),
         });
         expect(res.status).toBe(201);
@@ -87,12 +98,8 @@ describe('Flags API', () => {
       it('creates a percentage flag and returns 201', async () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key: uuidv7(),
-            type: 'percentage',
-            percentage: 25,
-          }),
+          headers: authHeaders(),
+          body: JSON.stringify({ key: uuidv7(), type: 'percentage', percentage: 25 }),
         });
         expect(res.status).toBe(201);
         const body = (await res.json()) as { data: { percentage: number } };
@@ -102,7 +109,7 @@ describe('Flags API', () => {
       it('creates an identifier flag and returns 201', async () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({
             key: uuidv7(),
             type: 'identifier',
@@ -123,7 +130,7 @@ describe('Flags API', () => {
 
         const second = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ key, type: 'boolean' }),
         });
         expect(second.status).toBe(409);
@@ -136,7 +143,7 @@ describe('Flags API', () => {
       it('returns 400 when type=percentage but percentage is missing', async () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ key: uuidv7(), type: 'percentage' }),
         });
         expect(res.status).toBe(400);
@@ -145,7 +152,7 @@ describe('Flags API', () => {
       it('returns 400 when type=identifier but identifiers is missing', async () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ key: uuidv7(), type: 'identifier' }),
         });
         expect(res.status).toBe(400);
@@ -156,7 +163,7 @@ describe('Flags API', () => {
       it('returns 400 when the key contains invalid characters', async () => {
         const res = await app.request(flagUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ key: 'UPPER_CASE', type: 'boolean' }),
         });
         expect(res.status).toBe(400);
@@ -169,7 +176,7 @@ describe('Flags API', () => {
           `/api/projects/${projectId}/environments/00000000-0000-0000-0000-000000000000/flags`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ key: uuidv7(), type: 'boolean' }),
           },
         );
@@ -182,7 +189,9 @@ describe('Flags API', () => {
     describe('when the flag exists', () => {
       it('returns 200 with the flag', async () => {
         const { flag } = await createBooleanFlag();
-        const res = await app.request(flagUrl(flag.key));
+        const res = await app.request(flagUrl(flag.key), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: { key: string } };
         expect(body.data.key).toBe(flag.key);
@@ -191,7 +200,9 @@ describe('Flags API', () => {
 
     describe('when the flag does not exist', () => {
       it('returns 404', async () => {
-        const res = await app.request(flagUrl('does-not-exist'));
+        const res = await app.request(flagUrl('does-not-exist'), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(404);
       });
     });
@@ -203,7 +214,7 @@ describe('Flags API', () => {
         const { flag } = await createBooleanFlag();
         const res = await app.request(flagUrl(flag.key), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ enabled: true }),
         });
         expect(res.status).toBe(200);
@@ -216,7 +227,7 @@ describe('Flags API', () => {
       it('returns 404', async () => {
         const res = await app.request(flagUrl('does-not-exist'), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ enabled: true }),
         });
         expect(res.status).toBe(404);
@@ -228,10 +239,15 @@ describe('Flags API', () => {
     describe('when the flag exists', () => {
       it('deletes the flag and returns 204', async () => {
         const { flag } = await createBooleanFlag();
-        const res = await app.request(flagUrl(flag.key), { method: 'DELETE' });
+        const res = await app.request(flagUrl(flag.key), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(204);
 
-        const getRes = await app.request(flagUrl(flag.key));
+        const getRes = await app.request(flagUrl(flag.key), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(getRes.status).toBe(404);
       });
     });
@@ -240,6 +256,7 @@ describe('Flags API', () => {
       it('returns 404', async () => {
         const res = await app.request(flagUrl('does-not-exist'), {
           method: 'DELETE',
+          headers: { Authorization: `Bearer ${userKey}` },
         });
         expect(res.status).toBe(404);
       });

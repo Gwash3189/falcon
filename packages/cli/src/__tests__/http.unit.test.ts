@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiResponseError, apiFetch } from '../http.js';
 
-const mockConfig = { serverUrl: 'http://localhost:3000', apiKey: 'flk_test_key' };
+const mockConfig = {
+  serverUrl: 'http://localhost:3000',
+  apiKey: 'flk_test_key',
+  email: 'test@example.com',
+};
 
 function makeResponse(status: number, body: unknown): Response {
   return {
@@ -63,7 +67,11 @@ describe('apiFetch', () => {
   });
 
   it('trims a trailing slash from serverUrl', async () => {
-    const configWithSlash = { serverUrl: 'http://localhost:3000/', apiKey: 'flk_test' };
+    const configWithSlash = {
+      serverUrl: 'http://localhost:3000/',
+      apiKey: 'flk_test',
+      email: 'test@example.com',
+    };
     vi.mocked(fetch).mockResolvedValue(makeResponse(200, { data: [] }));
     await apiFetch(configWithSlash, '/api/projects');
     expect(fetch).toHaveBeenCalledWith('http://localhost:3000/api/projects', expect.anything());

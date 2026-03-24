@@ -3,16 +3,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from './helpers/app.js';
 
 describe('Environments API', () => {
-  let app: ReturnType<typeof createTestApp>['app'];
+  let app: Awaited<ReturnType<typeof createTestApp>>['app'];
+  let userKey: string;
   let projectId: string;
 
   beforeAll(async () => {
-    ({ app } = createTestApp());
+    ({ app, userKey } = await createTestApp());
 
     const res = await app.request('/api/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'test', slug: 'test' }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+      body: JSON.stringify({ name: 'test', slug: uuidv7() }),
     });
 
     const body = (await res.json()) as { data: { id: string } };
@@ -20,7 +21,10 @@ describe('Environments API', () => {
   });
 
   afterAll(async () => {
-    await app.request(`/api/projects/${projectId}`, { method: 'DELETE' });
+    await app.request(`/api/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${userKey}` },
+    });
   });
 
   function envUrl(envId?: string) {
@@ -28,29 +32,35 @@ describe('Environments API', () => {
     return envId ? `${base}/${envId}` : base;
   }
 
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` };
+  }
+
   async function createEnv(name = uuidv7(), slug = uuidv7()) {
     const res = await app.request(envUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ name, slug }),
     });
-    const body = (await res.json()) as {
-      data: { id: string; name: string; slug: string };
-    };
+    const body = (await res.json()) as { data: { id: string; name: string; slug: string } };
     return { res, env: body.data };
   }
 
   describe('GET /…/environments', () => {
     describe('when the project exists', () => {
       it('returns 200', async () => {
-        const res = await app.request(envUrl());
+        const res = await app.request(envUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);
       });
 
       it('returns the environment', async () => {
-        const res = await app.request(envUrl());
+        const res = await app.request(envUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);
       });
@@ -60,6 +70,7 @@ describe('Environments API', () => {
       it('returns 404', async () => {
         const res = await app.request(
           '/api/projects/00000000-0000-0000-0000-000000000000/environments',
+          { headers: { Authorization: `Bearer ${userKey}` } },
         );
         expect(res.status).toBe(404);
       });
@@ -73,7 +84,7 @@ describe('Environments API', () => {
         const slug = uuidv7();
         const res = await app.request(envUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ name, slug }),
         });
         expect(res.status).toBe(201);
@@ -94,7 +105,7 @@ describe('Environments API', () => {
 
         const second = await app.request(envUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ name: 'test', slug }),
         });
         expect(second.status).toBe(409);
@@ -107,7 +118,7 @@ describe('Environments API', () => {
       it('returns 400 when the slug is missing', async () => {
         const res = await app.request(envUrl(), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ name: uuidv7() }),
         });
         expect(res.status).toBe(400);
@@ -120,7 +131,7 @@ describe('Environments API', () => {
           '/api/projects/00000000-0000-0000-0000-000000000000/environments',
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ name: 'X', slug: uuidv7() }),
           },
         );
@@ -133,7 +144,9 @@ describe('Environments API', () => {
     describe('when the environment exists', () => {
       it('returns 200 with the environment', async () => {
         const { env } = await createEnv();
-        const res = await app.request(envUrl(env.id));
+        const res = await app.request(envUrl(env.id), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: { id: string } };
         expect(body.data.id).toBe(env.id);
@@ -142,7 +155,9 @@ describe('Environments API', () => {
 
     describe('when the environment does not exist', () => {
       it('returns 404', async () => {
-        const res = await app.request(envUrl('00000000-0000-0000-0000-000000000000'));
+        const res = await app.request(envUrl('00000000-0000-0000-0000-000000000000'), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(404);
       });
     });
@@ -154,7 +169,7 @@ describe('Environments API', () => {
         const { env } = await createEnv();
         const res = await app.request(envUrl(env.id), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ name: 'Updated Name' }),
         });
         expect(res.status).toBe(200);
@@ -167,7 +182,7 @@ describe('Environments API', () => {
       it('returns 404', async () => {
         const res = await app.request(envUrl('00000000-0000-0000-0000-000000000000'), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ name: 'x' }),
         });
         expect(res.status).toBe(404);
@@ -179,10 +194,15 @@ describe('Environments API', () => {
     describe('when the environment exists', () => {
       it('deletes the environment and returns 204', async () => {
         const { env } = await createEnv();
-        const res = await app.request(envUrl(env.id), { method: 'DELETE' });
+        const res = await app.request(envUrl(env.id), {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(204);
 
-        const getRes = await app.request(envUrl(env.id));
+        const getRes = await app.request(envUrl(env.id), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(getRes.status).toBe(404);
       });
     });
@@ -191,6 +211,7 @@ describe('Environments API', () => {
       it('returns 404', async () => {
         const res = await app.request(envUrl('00000000-0000-0000-0000-000000000000'), {
           method: 'DELETE',
+          headers: { Authorization: `Bearer ${userKey}` },
         });
         expect(res.status).toBe(404);
       });

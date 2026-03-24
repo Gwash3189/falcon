@@ -3,6 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "setup": "[ -f .env ] || cp .env.example .env && pnpm install && pnpm pods:up && pnpm --filter @falcon/server migrate",
     "predev": "[ -f .env ] || cp .env.example .env",
     "dev": "pnpm pods:up && pnpm --filter @falcon/server dev",
     "pods:up": "podman compose up -d 2>/dev/null",

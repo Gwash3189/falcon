@@ -10,14 +10,15 @@ const envSchema = z.object({
   VALKEY_URL: z.string().url(),
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  BOOTSTRAP_ADMIN_KEY: z.string().min(1),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
 
 export function config(): AppConfig {
   const path = join(__dirname, '../../../.env');
-  const result = _config({ path, quiet: true });
-  const envResult = envSchema.safeParse(result.parsed);
+  _config({ path, quiet: true }); // loads .env vars into process.env; no-op if file missing
+  const envResult = envSchema.safeParse(process.env);
   if (!envResult.success) {
     throw new Error(`Invalid environment variables:\n${envResult.error.message}`);
   }

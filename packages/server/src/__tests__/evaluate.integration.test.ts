@@ -4,9 +4,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createDb } from '../db/connection.js';
 import type { AuditQueue } from '../queue/client.js';
+import { createUserKey } from '../user-keys/service.js';
 import { DATABASE_URL } from './config.js';
 
 const stubQueue = { add: async () => {} } as unknown as AuditQueue;
+const testAppConfig = { BOOTSTRAP_ADMIN_KEY: 'test-bootstrap-key' };
 
 function createMockRedis() {
   const store = new Map<string, string>();
@@ -29,20 +31,26 @@ function createMockRedis() {
 
 function buildApp(redis: Redis) {
   const db = createDb(DATABASE_URL);
-  return createApp({ db, redis, queue: stubQueue });
+  return createApp({ db, redis, queue: stubQueue, appConfig: testAppConfig });
 }
 
 describe('Evaluate API', () => {
   let projectId: string;
   let envId: string;
   let rawKey: string;
+  let userKey: string;
 
   beforeAll(async () => {
+    const { rawKey: uk } = await createUserKey(
+      `eval-test-${Math.random().toString(36).slice(2)}@example.com`,
+    );
+    userKey = uk;
+
     const baseApp = buildApp(createMockRedis());
 
     const projRes = await baseApp.request('/api/projects', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
       body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const projBody = (await projRes.json()) as { data: { id: string } };
@@ -50,7 +58,7 @@ describe('Evaluate API', () => {
 
     const envRes = await baseApp.request(`/api/projects/${projectId}/environments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
       body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
     });
     const envBody = (await envRes.json()) as { data: { id: string } };
@@ -58,25 +66,42 @@ describe('Evaluate API', () => {
 
     const keyRes = await baseApp.request(
       `/api/projects/${projectId}/environments/${envId}/api-keys`,
-      { method: 'POST' },
+      { method: 'POST', headers: { Authorization: `Bearer ${userKey}` } },
     );
     const keyBody = (await keyRes.json()) as { data: { rawKey: string } };
     rawKey = keyBody.data.rawKey;
 
     await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        key: 'my-feature',
-        type: 'boolean',
-        enabled: true,
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+      body: JSON.stringify({ key: 'my-feature', type: 'boolean', enabled: true }),
+    });
+
+    await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+      body: JSON.stringify({ key: 'pct-flag', type: 'percentage', percentage: 100 }),
+    });
+
+    await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+      body: JSON.stringify({ key: 'pct-flag-zero', type: 'percentage', percentage: 0 }),
+    });
+
+    await baseApp.request(`/api/projects/${projectId}/environments/${envId}/flags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+      body: JSON.stringify({ key: 'id-flag', type: 'identifier', identifiers: ['allowed-user'] }),
     });
   });
 
   afterAll(async () => {
     const baseApp = buildApp(createMockRedis());
-    await baseApp.request(`/api/projects/${projectId}`, { method: 'DELETE' });
+    await baseApp.request(`/api/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${userKey}` },
+    });
   });
 
   function evaluate(app: ReturnType<typeof buildApp>, body: object) {
@@ -122,19 +147,14 @@ describe('Evaluate API', () => {
       const app = buildApp(createMockRedis());
       const res = await evaluate(app, { flag_key: 'my-feature' });
       expect(res.status).toBe(200);
-      const body = (await res.json()) as {
-        data: { flag_key: string; enabled: boolean };
-      };
+      const body = (await res.json()) as { data: { flag_key: string; enabled: boolean } };
       expect(body.data.flag_key).toBe('my-feature');
       expect(typeof body.data.enabled).toBe('boolean');
     });
 
     it('accepts an optional identifier in the body', async () => {
       const app = buildApp(createMockRedis());
-      const res = await evaluate(app, {
-        flag_key: 'my-feature',
-        identifier: 'user-123',
-      });
+      const res = await evaluate(app, { flag_key: 'my-feature', identifier: 'user-123' });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { data: { enabled: boolean } };
       expect(typeof body.data.enabled).toBe('boolean');
@@ -145,7 +165,6 @@ describe('Evaluate API', () => {
       const app = buildApp(mockRedis);
 
       await evaluate(app, { flag_key: 'my-feature' });
-      // Count only cache entries (keys starting with 'flag:')
       const cacheEntries = Array.from(mockRedis._store.keys()).filter((k) =>
         k.startsWith('flag:'),
       ).length;
@@ -153,6 +172,92 @@ describe('Evaluate API', () => {
 
       const res = await evaluate(app, { flag_key: 'my-feature' });
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe('percentage flag evaluation', () => {
+    it('returns true for a 100% rollout', async () => {
+      const app = buildApp(createMockRedis());
+      const res = await evaluate(app, { flag_key: 'pct-flag', identifier: 'any-user' });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { enabled: boolean } };
+      expect(body.data.enabled).toBe(true);
+    });
+
+    it('returns false for a 0% rollout', async () => {
+      const app = buildApp(createMockRedis());
+      const res = await evaluate(app, { flag_key: 'pct-flag-zero', identifier: 'any-user' });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { enabled: boolean } };
+      expect(body.data.enabled).toBe(false);
+    });
+  });
+
+  describe('identifier flag evaluation', () => {
+    it('returns true for a matching identifier', async () => {
+      const app = buildApp(createMockRedis());
+      const res = await evaluate(app, { flag_key: 'id-flag', identifier: 'allowed-user' });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { enabled: boolean } };
+      expect(body.data.enabled).toBe(true);
+    });
+
+    it('returns false for a non-matching identifier', async () => {
+      const app = buildApp(createMockRedis());
+      const res = await evaluate(app, { flag_key: 'id-flag', identifier: 'other-user' });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { enabled: boolean } };
+      expect(body.data.enabled).toBe(false);
+    });
+  });
+
+  describe('revoked SDK key', () => {
+    it('returns 401 after the environment API key is revoked', async () => {
+      // Create a fresh project/env/key specifically for this test
+      const baseApp = buildApp(createMockRedis());
+      const p = await baseApp.request('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+        body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
+      });
+      const { data: proj } = (await p.json()) as { data: { id: string } };
+
+      const e = await baseApp.request(`/api/projects/${proj.id}/environments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
+        body: JSON.stringify({ name: uuidv7(), slug: uuidv7() }),
+      });
+      const { data: env } = (await e.json()) as { data: { id: string } };
+
+      const k = await baseApp.request(`/api/projects/${proj.id}/environments/${env.id}/api-keys`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userKey}` },
+      });
+      const { data: keyData } = (await k.json()) as { data: { id: string; rawKey: string } };
+
+      // Revoke it
+      await baseApp.request(
+        `/api/projects/${proj.id}/environments/${env.id}/api-keys/${keyData.id}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${userKey}` } },
+      );
+
+      // Now evaluation should 401
+      const app = buildApp(createMockRedis());
+      const res = await app.request('/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${keyData.rawKey}`,
+        },
+        body: JSON.stringify({ flag_key: 'any-flag' }),
+      });
+      expect(res.status).toBe(401);
+
+      // Clean up
+      await baseApp.request(`/api/projects/${proj.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${userKey}` },
+      });
     });
   });
 

@@ -8,6 +8,8 @@ export type {
   NewEnvironment,
   NewFlag,
   NewProject,
+  NewUserApiKey,
   Project,
+  UserApiKey,
 } from '../schema.js';
-export { apiKeys, auditLog, environments, flags, projects } from '../schema.js';
+export { apiKeys, auditLog, environments, flags, projects, userApiKeys } from '../schema.js';

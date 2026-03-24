@@ -6,6 +6,7 @@ import type { AuditQueue } from '../queue/client.js';
 import { DATABASE_URL } from './config.js';
 
 const fakeQueue = { add: async () => {} } as unknown as AuditQueue;
+const testAppConfig = { BOOTSTRAP_ADMIN_KEY: 'test-bootstrap-key' };
 
 function makeRedis(pingResult: 'ok' | 'fail'): Redis {
   return {
@@ -20,7 +21,12 @@ describe('GET /health', () => {
   describe('when db and redis are both healthy', () => {
     it('returns 200 with status ok and a timestamp', async () => {
       const db = createDb(DATABASE_URL);
-      const app = createApp({ db, redis: makeRedis('ok'), queue: fakeQueue });
+      const app = createApp({
+        db,
+        redis: makeRedis('ok'),
+        queue: fakeQueue,
+        appConfig: testAppConfig,
+      });
       const res = await app.request('/health');
       expect(res.status).toBe(200);
       const body = (await res.json()) as { status: string; timestamp: string };
