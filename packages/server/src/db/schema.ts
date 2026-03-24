@@ -77,9 +77,7 @@ export const userApiKeys = pgTable('user_api_keys', {
 
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
-  flagId: uuid('flag_id')
-    .notNull()
-    .references(() => flags.id),
+  flagId: uuid('flag_id').notNull(),
   environmentId: uuid('environment_id').notNull(),
   action: text('action').notNull(),
   actor: text('actor'),

@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import * as schema from './schema/index.js';
 
 export function createDb(url: string = config().DATABASE_URL) {
-  const client = postgres(url);
+  const client = postgres(url, { max: 3 });
   return drizzle(client, { schema });
 }
 
