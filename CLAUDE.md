@@ -11,7 +11,7 @@ The deployment model is npm-based: users install and run `npx @flagline/server` 
 - **Runtime:** Node.js 20+ with TypeScript (strict mode, ESM everywhere)
 - **API Framework:** Hono (with @hono/node-server for Node deployment)
 - **Database:** PostgreSQL 16 via Drizzle ORM with the `postgres` driver
-- **Cache:** Redis 7 via ioredis
+- **Cache:** Valkey 7 via ioredis
 - **CLI:** oclif (TypeScript-native, command-per-file pattern)
 - **Validation:** Zod (used everywhere — env parsing, API request validation, CLI input)
 - **Background Jobs:** BullMQ (Redis-backed, for audit log writes and future webhook delivery)
@@ -31,6 +31,24 @@ packages/
   cli/           ← PUBLIC   — @flagline/cli
   sdk-node/      ← PUBLIC   — @flagline/sdk-node
 ```
+
+## Tests, Linting and Pull Requests
+
+The following commands must pass before any pull requests are made
+
+1. pnpm test:unit && pnpm test:integration
+2. pnpm lint
+3. pnpm format
+4. pnpm typecheck
+
+Only when all these commands pass can a pull request be made. 
+
+## Summarising and Reporting on Work
+
+Each pull request must contain a description that summarises the work done well enough that both other
+AI Agents and humans can understand and fully review the pull request. 
+
+The description must be good enough that it can be fed into another Sonnet style AI model to either continue work or iterate one. 
 
 **Private packages** (`shared`, `web`) are inlined into public packages at build time via unbuild. They must never appear as external dependencies in published output.
 
