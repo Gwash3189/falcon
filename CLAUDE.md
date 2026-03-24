@@ -51,8 +51,35 @@ Project
 
 - A **Project** is the top-level organizational unit.
 - Each project has multiple **Environments**. Flags exist per-environment — a flag can be on in staging and off in production.
-- **API Keys** are scoped to an environment. One key per environment for server-side evaluation, issued via CLI or API.
+- **Environment API Keys** (`api_keys` table) are scoped to an environment for SDK/evaluation requests.
+- **User API Keys** (`user_api_keys` table) are scoped to a user (by email) for CRUD API requests. These are separate from environment keys.
 - **Flags** have a key (string, unique within an environment), a type, and type-specific configuration.
+
+## Authentication Model
+
+There are two separate authentication layers:
+
+### User API Keys (CRUD authentication)
+- All CRUD API requests (`/api/*`) require a `Authorization: Bearer <user-key>` header.
+- User keys are stored in `user_api_keys` and are scoped to an email address.
+- Admin creates user keys via `POST /admin/keys` (protected by `BOOTSTRAP_ADMIN_KEY`).
+- Bootstrap: set `BOOTSTRAP_ADMIN_KEY` in `.env`. The first key is created via this bootstrap token.
+- Actor (email) from the user key is recorded in the audit log for every flag mutation.
+
+### Environment API Keys (SDK/evaluation authentication)
+- The `/evaluate` endpoint uses environment-scoped keys from `api_keys`.
+- These keys are created per-environment and used by the SDK in user applications.
+
+### Admin Endpoints (`/admin/*`)
+- Protected by the `BOOTSTRAP_ADMIN_KEY` env var.
+- `POST /admin/keys` — create a user key for an email
+- `GET /admin/keys` — list all user keys
+- `DELETE /admin/keys/:email` — revoke all keys for an email
+
+### CLI Auth Flow
+1. Admin creates a user key: `falcon admin:keys:create user@example.com`
+2. User runs: `falcon init --key <key> --email user@example.com`
+3. Config stored at `~/.config/falcon/config.json` with `{serverUrl, apiKey, email}`
 
 ## V1 Feature Scope
 
@@ -121,15 +148,18 @@ Build these. No more, no less.
 - Use `@hono/zod-validator` for request validation. Define the Zod schema inline in the route file or in a sibling `*.schema.ts` file if it's large.
 - Return consistent response shapes: `{ data: T }` for success, `{ error: { code: string, message: string } }` for errors.
 - The evaluation endpoint (`/evaluate`) is separate from CRUD routes and should be optimizable independently (different middleware stack, caching strategy, rate limits).
-- API key authentication via `Authorization: Bearer <key>` header. Middleware validates the key and attaches the resolved environment to the request context.
+- CRUD API (`/api/*`) uses `userKeyAuth` middleware — validates against `user_api_keys` table, attaches `{ email }` to context as `userAuth`.
+- Evaluation (`/evaluate`) uses `apiKeyAuth` middleware — validates against `api_keys` (environment-scoped), attaches `{ environmentId, keyPrefix }` to context as `auth`.
+- Admin (`/admin/*`) uses inline bootstrap key middleware.
 
 ### CLI (oclif)
 
 - One command per file in `packages/cli/src/commands/`.
 - Commands are organized by resource: `commands/projects/list.ts`, `commands/flags/create.ts`.
+- Admin commands under `commands/admin/keys/` — create, list, revoke user keys.
 - Every command must work non-interactively (flags/arguments) and interactively (prompts) where it makes sense.
 - Output should be human-readable by default and support `--json` for scripting.
-- Auth: CLI stores an API key in a local config file (`~/.config/flagline/config.json`).
+- Auth: CLI stores `{ serverUrl, apiKey, email }` in `~/.config/falcon/config.json`.
 
 ### Testing
 

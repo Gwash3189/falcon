@@ -6,11 +6,12 @@ import { createAuditQueue } from './queue/client.js';
 import { createAuditWorker } from './queue/worker.js';
 
 export function createServer() {
-  const { DATABASE_URL, VALKEY_URL } = config();
+  const appConfig = config();
+  const { DATABASE_URL, VALKEY_URL } = appConfig;
   const db = createDb(DATABASE_URL);
   const redis = new Redis(VALKEY_URL);
   const queue = createAuditQueue(VALKEY_URL);
   const worker = createAuditWorker(VALKEY_URL, db);
-  const app = createApp({ db, redis, queue });
-  return { app, config: config(), db, redis, queue, worker };
+  const app = createApp({ db, redis, queue, appConfig });
+  return { app, config: appConfig, db, redis, queue, worker };
 }

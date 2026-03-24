@@ -4,15 +4,15 @@ import { readConfig, writeConfig } from '../config.js';
 /**
  * falcon init
  *
- * Connect the CLI to a running Falcon server. Stores server URL and API key
- * in ~/.config/falcon/config.json. Run this once and you're ready to go.
+ * Connect the CLI to a running Falcon server. Stores server URL, API key, and
+ * email in ~/.config/falcon/config.json. Run this once and you're ready to go.
  */
 export default class Init extends Command {
   static override description = 'Connect falcon CLI to a running server';
 
   static override examples = [
     '$ falcon init',
-    '$ falcon init --url http://localhost:3000 --key flk_abc123',
+    '$ falcon init --url http://localhost:3000 --key flk_abc123 --email me@example.com',
   ];
 
   static override flags = {
@@ -21,31 +21,33 @@ export default class Init extends Command {
       default: 'http://localhost:3000',
     }),
     key: Flags.string({
-      description: 'API key (from `falcon api-keys:create`)',
+      description: 'User API key (from `falcon admin:keys:create`)',
+    }),
+    email: Flags.string({
+      description: 'Your email address (must match the key)',
     }),
   };
 
   override async run() {
     const { flags } = await this.parse(Init);
 
-    const { url, key } = flags;
+    const { url, key, email } = flags;
 
-    if (!key) {
-      // If no key provided, check if we're bootstrapping a fresh server
+    if (!key || !email) {
       this.log('');
       this.log('Welcome to Falcon! 🦅');
       this.log('');
-      this.log('To get started, you need an API key from a Falcon server.');
+      this.log('To get started, you need a user API key from a Falcon admin.');
       this.log('');
       this.log('Quick start:');
       this.log('  1. Start the server: pnpm dev (or npx @falcon/server)');
-      this.log('  2. Create a project: POST http://localhost:3000/api/projects');
-      this.log('  3. Create an API key and run: falcon init --key <your-key>');
+      this.log('  2. Admin creates a key: POST /admin/keys with BOOTSTRAP_ADMIN_KEY');
+      this.log('  3. Run: falcon init --key <your-key> --email <your-email>');
       this.log('');
-      this.log('Or use the server URL and an existing key:');
-      this.log('  falcon init --url http://my-server.com --key flk_abc123');
+      this.log('Or use explicit flags:');
+      this.log('  falcon init --url http://my-server.com --key flk_abc123 --email me@example.com');
       this.log('');
-      this.error('--key is required. See instructions above.');
+      this.error('--key and --email are required. See instructions above.');
     }
 
     const existing = await readConfig();
@@ -53,10 +55,11 @@ export default class Init extends Command {
       this.log(`Reconfiguring (was: ${existing.serverUrl})`);
     }
 
-    await writeConfig({ serverUrl: url, apiKey: key });
+    await writeConfig({ serverUrl: url, apiKey: key, email });
 
     this.log('');
     this.log(`✓ Connected to ${url}`);
+    this.log(`✓ Authenticated as ${email}`);
     this.log('Config saved to ~/.config/falcon/config.json');
     this.log('');
     this.log('Next steps:');

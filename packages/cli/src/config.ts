@@ -8,6 +8,7 @@ const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 export interface CliConfig {
   serverUrl: string;
   apiKey: string;
+  email: string;
 }
 
 export async function readConfig(): Promise<CliConfig | null> {

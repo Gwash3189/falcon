@@ -8,6 +8,7 @@
     "dev": "tsx watch",
     "build": "unbuild",
     "db:migrate": "drizzle-kit migrate",
+    "migrate": "drizzle-kit migrate",
     "test": "vitest run"
   },
   "dependencies": {

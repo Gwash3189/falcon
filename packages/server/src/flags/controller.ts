@@ -20,7 +20,8 @@ export function createFlagsController() {
       const body = c.req.valid('json' as never);
       const env = await getEnvironment(envId, projectId);
       if (!env) throw new NotFoundError('Environment not found');
-      const data = await createFlag(envId, body); // ConflictError bubbles
+      const actor = c.get('userAuth')?.email ?? null;
+      const data = await createFlag(envId, body, actor); // ConflictError bubbles
       return c.json({ data }, 201);
     },
 
@@ -42,7 +43,8 @@ export function createFlagsController() {
       const body = c.req.valid('json' as never);
       const env = await getEnvironment(envId, projectId);
       if (!env) throw new NotFoundError('Environment not found');
-      const data = await updateFlag(envId, flagKey, body);
+      const actor = c.get('userAuth')?.email ?? null;
+      const data = await updateFlag(envId, flagKey, body, actor);
       if (!data) throw new NotFoundError('Flag not found');
       return c.json({ data });
     },
@@ -53,7 +55,8 @@ export function createFlagsController() {
       const { flagKey } = c.req.valid('param' as never);
       const env = await getEnvironment(envId, projectId);
       if (!env) throw new NotFoundError('Environment not found');
-      const deleted = await deleteFlag(envId, flagKey);
+      const actor = c.get('userAuth')?.email ?? null;
+      const deleted = await deleteFlag(envId, flagKey, actor);
       if (!deleted) throw new NotFoundError('Flag not found');
       return c.body(null, 204);
     },

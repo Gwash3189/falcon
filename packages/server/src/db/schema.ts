@@ -66,6 +66,15 @@ export const apiKeys = pgTable('api_keys', {
   revokedAt: timestamp('revoked_at'),
 });
 
+export const userApiKeys = pgTable('user_api_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').notNull(),
+  keyHash: text('key_hash').notNull().unique(),
+  keyPrefix: text('key_prefix').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  revokedAt: timestamp('revoked_at'),
+});
+
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   flagId: uuid('flag_id')
@@ -93,3 +102,6 @@ export type NewApiKey = typeof apiKeys.$inferInsert;
 
 export type AuditLogEntry = typeof auditLog.$inferSelect;
 export type NewAuditLogEntry = typeof auditLog.$inferInsert;
+
+export type UserApiKey = typeof userApiKeys.$inferSelect;
+export type NewUserApiKey = typeof userApiKeys.$inferInsert;

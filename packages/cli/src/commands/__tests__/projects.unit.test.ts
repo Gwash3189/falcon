@@ -27,7 +27,7 @@ import ProjectsList from '../projects/list.js';
 
 const mockApiFetch = vi.mocked(apiFetch);
 const mockRequireConfig = vi.mocked(requireConfig);
-const mockConfig = { serverUrl: 'http://localhost:3000', apiKey: 'flk_test' };
+const mockConfig = { serverUrl: 'http://localhost:3000', apiKey: 'flk_test', email: 'test@example.com' };
 
 function captureOutput(): { lines: () => string } {
   const logs: string[] = [];

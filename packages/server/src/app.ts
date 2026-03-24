@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Redis } from 'iovalkey';
 import { createApiKeysRouter } from './api-keys/router.js';
+import type { AppConfig } from './config.js';
 import type { Db } from './db/connection.js';
 import { checkDatabase } from './db/health.js';
 import { checkRedis } from './db/redis-health.js';
@@ -11,15 +12,18 @@ import { createFlagsRouter } from './flags/router.js';
 import { requestLogger } from './middleware/logger.js';
 import { createProjectsRouter } from './projects/router.js';
 import type { AuditQueue } from './queue/client.js';
+import { userKeyAuth } from './user-keys/auth.js';
+import { createAdminRouter } from './user-keys/router.js';
 
 interface AppDeps {
   db: Db;
   redis: Redis;
   queue: AuditQueue;
+  appConfig: Pick<AppConfig, 'BOOTSTRAP_ADMIN_KEY'>;
 }
 
 export function createApp(deps: AppDeps) {
-  const { db, redis } = deps;
+  const { db, redis, appConfig } = deps;
   const app = new Hono();
 
   app.use('*', requestLogger);
@@ -41,11 +45,15 @@ export function createApp(deps: AppDeps) {
     return c.json({ status: 'unavailable', timestamp }, 503);
   });
 
-  // Evaluation endpoint — authenticated by API key, separate from CRUD
+  // Evaluation endpoint — authenticated by environment API key, separate from CRUD
   app.route('/evaluate', createEvaluateRouter(db, redis));
 
-  // CRUD API
+  // Admin endpoints — protected by bootstrap key
+  app.route('/admin', createAdminRouter(appConfig));
+
+  // CRUD API — protected by user API key
   const api = new Hono();
+  api.use('*', userKeyAuth());
   api.route('/projects', createProjectsRouter());
   api.route('/projects/:projectId/environments', createEnvironmentsRouter());
   api.route('/projects/:projectId/environments/:envId/flags', createFlagsRouter());
