@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Redis } from 'iovalkey';
 import { createApiKeysRouter } from './api-keys/router.js';
+import { createAuditLogRouter } from './audit-log/router.js';
 import type { AppConfig } from './config.js';
 import type { Db } from './db/connection.js';
 import { checkDatabase } from './db/health.js';
@@ -10,6 +11,7 @@ import { AppError } from './errors.js';
 import { createEvaluateRouter } from './evaluate/router.js';
 import { createFlagsRouter } from './flags/router.js';
 import { requestLogger } from './middleware/logger.js';
+import { validateEnvId, validateProjectId } from './middleware/validate-params.js';
 import { createProjectsRouter } from './projects/router.js';
 import type { AuditQueue } from './queue/client.js';
 import { userKeyAuth } from './user-keys/auth.js';
@@ -55,9 +57,12 @@ export function createApp(deps: AppDeps) {
   const api = new Hono();
   api.use('*', userKeyAuth());
   api.route('/projects', createProjectsRouter());
+  api.use('/projects/:projectId/*', validateProjectId);
   api.route('/projects/:projectId/environments', createEnvironmentsRouter());
+  api.use('/projects/:projectId/environments/:envId/*', validateEnvId);
   api.route('/projects/:projectId/environments/:envId/flags', createFlagsRouter());
   api.route('/projects/:projectId/environments/:envId/api-keys', createApiKeysRouter());
+  api.route('/projects/:projectId/environments/:envId/audit-log', createAuditLogRouter());
 
   app.route('/api', api);
 
