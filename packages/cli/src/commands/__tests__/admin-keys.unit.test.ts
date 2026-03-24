@@ -1,5 +1,5 @@
 import { Command } from '@oclif/core';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const CLI_ROOT = new URL('../../../../', import.meta.url).pathname;
 

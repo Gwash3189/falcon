@@ -6,7 +6,7 @@ import { type AuditLogEntry, auditLog } from '../../db/schema/index.js';
 export type Dependencies = { db: Db };
 export type Params = {
   environmentId: string;
-  flagId?: string;
+  flagId?: string | undefined;
   limit: number;
   offset: number;
 };

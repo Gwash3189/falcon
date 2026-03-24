@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { createTestApp } from './helpers/app.js';
 
 describe('GET /api/projects/:projectId/environments/:envId/audit-log', () => {
-  async function setupProjectAndEnv(app: ReturnType<typeof import('../app.js').createApp>, userKey: string) {
+  async function setupProjectAndEnv(
+    app: ReturnType<typeof import('../app.js').createApp>,
+    userKey: string,
+  ) {
     const projRes = await app.request('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` },
@@ -25,10 +28,9 @@ describe('GET /api/projects/:projectId/environments/:envId/audit-log', () => {
     const { app, userKey } = await createTestApp();
     const { projectId, envId } = await setupProjectAndEnv(app, userKey);
 
-    const res = await app.request(
-      `/api/projects/${projectId}/environments/${envId}/audit-log`,
-      { headers: { Authorization: `Bearer ${userKey}` } },
-    );
+    const res = await app.request(`/api/projects/${projectId}/environments/${envId}/audit-log`, {
+      headers: { Authorization: `Bearer ${userKey}` },
+    });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: unknown[] };
@@ -70,9 +72,7 @@ describe('GET /api/projects/:projectId/environments/:envId/audit-log', () => {
     const { app, userKey } = await createTestApp();
     const { projectId, envId } = await setupProjectAndEnv(app, userKey);
 
-    const res = await app.request(
-      `/api/projects/${projectId}/environments/${envId}/audit-log`,
-    );
+    const res = await app.request(`/api/projects/${projectId}/environments/${envId}/audit-log`);
 
     expect(res.status).toBe(401);
   });

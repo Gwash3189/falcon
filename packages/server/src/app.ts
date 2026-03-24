@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Redis } from 'iovalkey';
 import { createApiKeysRouter } from './api-keys/router.js';
+import { createAuditLogRouter } from './audit-log/router.js';
 import type { AppConfig } from './config.js';
 import type { Db } from './db/connection.js';
 import { checkDatabase } from './db/health.js';
@@ -8,7 +9,6 @@ import { checkRedis } from './db/redis-health.js';
 import { createEnvironmentsRouter } from './environments/router.js';
 import { AppError } from './errors.js';
 import { createEvaluateRouter } from './evaluate/router.js';
-import { createAuditLogRouter } from './audit-log/router.js';
 import { createFlagsRouter } from './flags/router.js';
 import { requestLogger } from './middleware/logger.js';
 import { validateEnvId, validateProjectId } from './middleware/validate-params.js';

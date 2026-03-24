@@ -15,7 +15,14 @@ export function createAuditLogController() {
       const limit = Math.min(Number(c.req.query('limit') ?? 50), 100);
       const offset = Math.max(Number(c.req.query('offset') ?? 0), 0);
 
-      const data = await listAuditLog(envId, { flagId, limit, offset });
+      const options: { flagId?: string | undefined; limit: number; offset: number } = {
+        limit,
+        offset,
+      };
+      if (flagId !== undefined) {
+        options.flagId = flagId;
+      }
+      const data = await listAuditLog(envId, options);
       return c.json({ data });
     },
   };
