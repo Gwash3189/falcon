@@ -23,6 +23,7 @@ vi.mock('../../http.js', () => ({
 import { requireConfig } from '../../config.js';
 import { apiFetch } from '../../http.js';
 import EnvironmentsCreate from '../environments/create.js';
+import EnvironmentsGet from '../environments/get.js';
 import EnvironmentsList from '../environments/list.js';
 
 const mockApiFetch = vi.mocked(apiFetch);
@@ -162,5 +163,62 @@ describe('environments:create', () => {
     const output = out.lines();
     expect(output).toContain('env-uuid');
     expect(output).toContain('api-keys:create');
+  });
+});
+
+describe('environments:get', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
+  it('calls GET /api/projects/:projectId/environments/:envId', async () => {
+    mockApiFetch.mockResolvedValue({
+      id: 'env-uuid',
+      name: 'Production',
+      slug: 'production',
+      project_id: 'proj-1',
+    });
+    captureOutput();
+
+    await EnvironmentsGet.run(['env-uuid', '--project', 'proj-1'], CLI_ROOT);
+
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      mockConfig,
+      '/api/projects/proj-1/environments/env-uuid',
+    );
+  });
+
+  it('renders environment name, slug, and id', async () => {
+    mockApiFetch.mockResolvedValue({
+      id: 'env-uuid',
+      name: 'Production',
+      slug: 'production',
+      project_id: 'proj-1',
+    });
+    const out = captureOutput();
+
+    await EnvironmentsGet.run(['env-uuid', '--project', 'proj-1'], CLI_ROOT);
+
+    const output = out.lines();
+    expect(output).toContain('Production');
+    expect(output).toContain('production');
+    expect(output).toContain('env-uuid');
+  });
+
+  it('outputs JSON when --json is set', async () => {
+    const env = { id: 'env-uuid', name: 'Production', slug: 'production', project_id: 'proj-1' };
+    mockApiFetch.mockResolvedValue(env);
+    const out = captureOutput();
+
+    await EnvironmentsGet.run(['env-uuid', '--project', 'proj-1', '--json'], CLI_ROOT);
+
+    const parsed = JSON.parse(out.lines());
+    expect(parsed.id).toBe('env-uuid');
+    expect(parsed.slug).toBe('production');
   });
 });

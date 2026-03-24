@@ -23,6 +23,7 @@ vi.mock('../../http.js', () => ({
 import { requireConfig } from '../../config.js';
 import { apiFetch } from '../../http.js';
 import ProjectsCreate from '../projects/create.js';
+import ProjectsGet from '../projects/get.js';
 import ProjectsList from '../projects/list.js';
 
 const mockApiFetch = vi.mocked(apiFetch);
@@ -156,5 +157,60 @@ describe('projects:create', () => {
     const output = out.lines();
     expect(output).toContain('proj-uuid');
     expect(output).toContain('environments:create');
+  });
+});
+
+describe('projects:get', () => {
+  beforeEach(() => {
+    mockRequireConfig.mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
+  it('calls GET /api/projects/:id', async () => {
+    mockApiFetch.mockResolvedValue({
+      id: 'proj-uuid',
+      name: 'My App',
+      slug: 'my-app',
+      created_at: '2024-01-01',
+    });
+    captureOutput();
+
+    await ProjectsGet.run(['proj-uuid'], CLI_ROOT);
+
+    expect(mockApiFetch).toHaveBeenCalledWith(mockConfig, '/api/projects/proj-uuid');
+  });
+
+  it('renders project name, slug, id, and created date', async () => {
+    mockApiFetch.mockResolvedValue({
+      id: 'proj-uuid',
+      name: 'My App',
+      slug: 'my-app',
+      created_at: '2024-01-01',
+    });
+    const out = captureOutput();
+
+    await ProjectsGet.run(['proj-uuid'], CLI_ROOT);
+
+    const output = out.lines();
+    expect(output).toContain('My App');
+    expect(output).toContain('my-app');
+    expect(output).toContain('proj-uuid');
+    expect(output).toContain('2024-01-01');
+  });
+
+  it('outputs JSON when --json is set', async () => {
+    const project = { id: 'proj-uuid', name: 'My App', slug: 'my-app', created_at: '2024-01-01' };
+    mockApiFetch.mockResolvedValue(project);
+    const out = captureOutput();
+
+    await ProjectsGet.run(['proj-uuid', '--json'], CLI_ROOT);
+
+    const parsed = JSON.parse(out.lines());
+    expect(parsed.id).toBe('proj-uuid');
+    expect(parsed.slug).toBe('my-app');
   });
 });

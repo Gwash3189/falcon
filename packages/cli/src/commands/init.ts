@@ -40,8 +40,9 @@ export default class Init extends Command {
       this.log('To get started, you need a user API key from a Falcon admin.');
       this.log('');
       this.log('Quick start:');
-      this.log('  1. Start the server: pnpm dev (or npx @falcon/server)');
-      this.log('  2. Admin creates a key: POST /admin/keys with BOOTSTRAP_ADMIN_KEY');
+      this.log('  1. Start the server: npx @flagline/server (or pnpm dev)');
+      this.log('  2. Create your first user key:');
+      this.log('     falcon admin:keys:create admin@example.com --admin-key <BOOTSTRAP_ADMIN_KEY>');
       this.log('  3. Run: falcon init --key <your-key> --email <your-email>');
       this.log('');
       this.log('Or use explicit flags:');

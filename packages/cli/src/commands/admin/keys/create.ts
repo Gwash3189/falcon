@@ -1,5 +1,5 @@
 import { Args, Command, Flags } from '@oclif/core';
-import { requireConfig } from '../../../config.js';
+import { resolveAdminConfig } from '../../../admin-config.js';
 
 interface CreatedKey {
   id: string;
@@ -11,26 +11,37 @@ interface CreatedKey {
 
 export default class AdminKeysCreate extends Command {
   static override description = 'Create a user API key for an email address';
-  static override examples = ['$ falcon admin:keys:create user@example.com'];
+  static override examples = [
+    '$ falcon admin:keys:create user@example.com --admin-key <BOOTSTRAP_ADMIN_KEY>',
+  ];
 
   static override args = {
     email: Args.string({ description: 'Email address for the new key', required: true }),
   };
 
   static override flags = {
+    'admin-key': Flags.string({
+      description: 'Bootstrap admin key (or set FALCON_ADMIN_KEY env var)',
+      env: 'FALCON_ADMIN_KEY',
+    }),
+    'server-url': Flags.string({
+      description: 'Server URL (or set FALCON_SERVER_URL env var)',
+      env: 'FALCON_SERVER_URL',
+      default: 'http://localhost:3000',
+    }),
     json: Flags.boolean({ description: 'Output as JSON' }),
   };
 
   override async run() {
     const { args, flags } = await this.parse(AdminKeysCreate);
-    const config = await requireConfig();
+    const { serverUrl, adminKey } = resolveAdminConfig(flags);
 
-    const url = `${config.serverUrl.replace(/\/$/, '')}/admin/keys`;
+    const url = `${serverUrl}/admin/keys`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
+        Authorization: `Bearer ${adminKey}`,
       },
       body: JSON.stringify({ email: args.email }),
     });
