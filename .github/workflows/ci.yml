@@ -79,7 +79,7 @@ jobs:
           BOOTSTRAP_ADMIN_KEY: ci-bootstrap-key
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm vitest run
         env:
           DATABASE_URL: postgresql://falcon:falcon@localhost:5432/falcon_test
           VALKEY_URL: redis://localhost:6379
