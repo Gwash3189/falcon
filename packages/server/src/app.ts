@@ -8,8 +8,10 @@ import { checkRedis } from './db/redis-health.js';
 import { createEnvironmentsRouter } from './environments/router.js';
 import { AppError } from './errors.js';
 import { createEvaluateRouter } from './evaluate/router.js';
+import { createAuditLogRouter } from './audit-log/router.js';
 import { createFlagsRouter } from './flags/router.js';
 import { requestLogger } from './middleware/logger.js';
+import { validateEnvId, validateProjectId } from './middleware/validate-params.js';
 import { createProjectsRouter } from './projects/router.js';
 import type { AuditQueue } from './queue/client.js';
 import { userKeyAuth } from './user-keys/auth.js';
@@ -55,9 +57,12 @@ export function createApp(deps: AppDeps) {
   const api = new Hono();
   api.use('*', userKeyAuth());
   api.route('/projects', createProjectsRouter());
+  api.use('/projects/:projectId/*', validateProjectId);
   api.route('/projects/:projectId/environments', createEnvironmentsRouter());
+  api.use('/projects/:projectId/environments/:envId/*', validateEnvId);
   api.route('/projects/:projectId/environments/:envId/flags', createFlagsRouter());
   api.route('/projects/:projectId/environments/:envId/api-keys', createApiKeysRouter());
+  api.route('/projects/:projectId/environments/:envId/audit-log', createAuditLogRouter());
 
   app.route('/api', api);
 
