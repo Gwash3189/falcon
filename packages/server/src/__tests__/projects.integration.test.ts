@@ -33,7 +33,9 @@ describe('Projects API', () => {
 
   describe('GET /api/projects', () => {
     it('returns 200 with a data array', async () => {
-      const res = await app.request('/api/projects', { headers: { Authorization: `Bearer ${userKey}` } });
+      const res = await app.request('/api/projects', {
+        headers: { Authorization: `Bearer ${userKey}` },
+      });
       expect(res.status).toBe(200);
       const body = (await res.json()) as { data: unknown[] };
       expect(Array.isArray(body.data)).toBe(true);

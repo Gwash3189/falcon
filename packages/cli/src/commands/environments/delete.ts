@@ -18,11 +18,9 @@ export default class EnvironmentsDelete extends Command {
   override async run() {
     const { args, flags } = await this.parse(EnvironmentsDelete);
     const config = await requireConfig();
-    await apiFetch<void>(
-      config,
-      `/api/projects/${flags.project}/environments/${args.id}`,
-      { method: 'DELETE' },
-    );
+    await apiFetch<void>(config, `/api/projects/${flags.project}/environments/${args.id}`, {
+      method: 'DELETE',
+    });
 
     if (flags.json) {
       this.log(JSON.stringify({ deleted: true, id: args.id }));

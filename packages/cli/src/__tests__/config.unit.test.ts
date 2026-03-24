@@ -50,7 +50,11 @@ describe('writeConfig', () => {
   afterEach(() => vi.clearAllMocks());
 
   it('creates the config directory and writes JSON', async () => {
-    const config = { serverUrl: 'http://localhost:3000', apiKey: 'flk_abc123', email: 'test@example.com' };
+    const config = {
+      serverUrl: 'http://localhost:3000',
+      apiKey: 'flk_abc123',
+      email: 'test@example.com',
+    };
     await writeConfig(config);
     expect(mockMkdir).toHaveBeenCalledWith(expect.stringContaining('falcon'), {
       recursive: true,

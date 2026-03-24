@@ -49,14 +49,18 @@ describe('Environments API', () => {
   describe('GET /…/environments', () => {
     describe('when the project exists', () => {
       it('returns 200', async () => {
-        const res = await app.request(envUrl(), { headers: { Authorization: `Bearer ${userKey}` } });
+        const res = await app.request(envUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);
       });
 
       it('returns the environment', async () => {
-        const res = await app.request(envUrl(), { headers: { Authorization: `Bearer ${userKey}` } });
+        const res = await app.request(envUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);
       });

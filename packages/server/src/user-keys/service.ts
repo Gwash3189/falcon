@@ -27,13 +27,16 @@ export interface UserKeyRecord {
 export async function createUserKey(email: string): Promise<CreatedUserKey> {
   const { rawKey, keyHash, keyPrefix } = generateApiKey();
   const database = db();
-  const rows = await database
-    .insert(userApiKeys)
-    .values({ email, keyHash, keyPrefix })
-    .returning();
+  const rows = await database.insert(userApiKeys).values({ email, keyHash, keyPrefix }).returning();
   const record = rows[0];
   if (!record) throw new Error('Failed to create user API key');
-  return { id: record.id, email: record.email, keyPrefix: record.keyPrefix, rawKey, createdAt: record.createdAt };
+  return {
+    id: record.id,
+    email: record.email,
+    keyPrefix: record.keyPrefix,
+    rawKey,
+    createdAt: record.createdAt,
+  };
 }
 
 export async function listUserKeys(): Promise<UserKeyRecord[]> {

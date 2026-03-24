@@ -42,9 +42,16 @@ describe('Audit log', () => {
     queue = createAuditQueue(VALKEY_URL);
     worker = createAuditWorker(VALKEY_URL, db);
 
-    app = createApp({ db, redis: { get: async () => null, setex: async () => 'OK' } as never, queue, appConfig: testAppConfig });
+    app = createApp({
+      db,
+      redis: { get: async () => null, setex: async () => 'OK' } as never,
+      queue,
+      appConfig: testAppConfig,
+    });
 
-    const { rawKey, email } = await createUserKey(`audit-test-${Math.random().toString(36).slice(2)}@example.com`);
+    const { rawKey, email } = await createUserKey(
+      `audit-test-${Math.random().toString(36).slice(2)}@example.com`,
+    );
     userKey = rawKey;
     userEmail = email;
 
@@ -121,10 +128,7 @@ describe('Audit log', () => {
 
     await waitForJobCompletion(queue);
 
-    const entries = await db
-      .select()
-      .from(auditLog)
-      .where(eq(auditLog.flagId, flag.id));
+    const entries = await db.select().from(auditLog).where(eq(auditLog.flagId, flag.id));
     const updated = entries.find((e) => e.action === 'updated');
     expect(updated).toBeDefined();
     expect(updated?.actor).toBe(userEmail);
@@ -148,10 +152,7 @@ describe('Audit log', () => {
 
     await waitForJobCompletion(queue);
 
-    const entries = await db
-      .select()
-      .from(auditLog)
-      .where(eq(auditLog.flagId, flag.id));
+    const entries = await db.select().from(auditLog).where(eq(auditLog.flagId, flag.id));
     const deleted = entries.find((e) => e.action === 'deleted');
     expect(deleted).toBeDefined();
     expect(deleted?.actor).toBe(userEmail);

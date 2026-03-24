@@ -36,7 +36,9 @@ export async function createTestApp() {
   const app = createApp({ db, redis: stubRedis, queue: stubQueue, appConfig: testAppConfig });
 
   // Create a user key for authenticated CRUD requests
-  const { rawKey, email } = await createUserKey(`test-${Math.random().toString(36).slice(2, 8)}@example.com`);
+  const { rawKey, email } = await createUserKey(
+    `test-${Math.random().toString(36).slice(2, 8)}@example.com`,
+  );
 
   return { app, db, userKey: rawKey, userEmail: email };
 }

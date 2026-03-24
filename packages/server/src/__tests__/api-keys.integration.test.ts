@@ -40,14 +40,12 @@ describe('API Keys', () => {
     return keyId ? `${base}/${keyId}` : base;
   }
 
-  function authHeaders() {
-    return { 'Content-Type': 'application/json', Authorization: `Bearer ${userKey}` };
-  }
-
   describe('GET /…/api-keys', () => {
     describe('when the environment exists', () => {
       it('returns 200 with an array', async () => {
-        const res = await app.request(apiKeyUrl(), { headers: { Authorization: `Bearer ${userKey}` } });
+        const res = await app.request(apiKeyUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);

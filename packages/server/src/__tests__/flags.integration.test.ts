@@ -57,7 +57,9 @@ describe('Flags API', () => {
   describe('GET /…/flags', () => {
     describe('when the environment exists', () => {
       it('returns 200 with an array', async () => {
-        const res = await app.request(flagUrl(), { headers: { Authorization: `Bearer ${userKey}` } });
+        const res = await app.request(flagUrl(), {
+          headers: { Authorization: `Bearer ${userKey}` },
+        });
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: unknown[] };
         expect(Array.isArray(body.data)).toBe(true);

@@ -21,7 +21,12 @@ describe('GET /health', () => {
   describe('when db and redis are both healthy', () => {
     it('returns 200 with status ok and a timestamp', async () => {
       const db = createDb(DATABASE_URL);
-      const app = createApp({ db, redis: makeRedis('ok'), queue: fakeQueue, appConfig: testAppConfig });
+      const app = createApp({
+        db,
+        redis: makeRedis('ok'),
+        queue: fakeQueue,
+        appConfig: testAppConfig,
+      });
       const res = await app.request('/health');
       expect(res.status).toBe(200);
       const body = (await res.json()) as { status: string; timestamp: string };

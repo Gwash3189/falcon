@@ -41,7 +41,9 @@ describe('Evaluate API', () => {
   let userKey: string;
 
   beforeAll(async () => {
-    const { rawKey: uk } = await createUserKey(`eval-test-${Math.random().toString(36).slice(2)}@example.com`);
+    const { rawKey: uk } = await createUserKey(
+      `eval-test-${Math.random().toString(36).slice(2)}@example.com`,
+    );
     userKey = uk;
 
     const baseApp = buildApp(createMockRedis());
@@ -227,10 +229,10 @@ describe('Evaluate API', () => {
       });
       const { data: env } = (await e.json()) as { data: { id: string } };
 
-      const k = await baseApp.request(
-        `/api/projects/${proj.id}/environments/${env.id}/api-keys`,
-        { method: 'POST', headers: { Authorization: `Bearer ${userKey}` } },
-      );
+      const k = await baseApp.request(`/api/projects/${proj.id}/environments/${env.id}/api-keys`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userKey}` },
+      });
       const { data: keyData } = (await k.json()) as { data: { id: string; rawKey: string } };
 
       // Revoke it
