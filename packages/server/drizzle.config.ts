@@ -1,10 +1,14 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config } from 'dotenv';
 import type { Config } from 'drizzle-kit';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-config({ path: resolve(__dirname, '../../.env') });
+
+try {
+  process.loadEnvFile(resolve(__dirname, '../../.env'));
+} catch {
+  // .env not present — rely on env vars already being set (e.g. in CI)
+}
 
 export default {
   schema: './src/db/schema.ts',
