@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { Config } from 'drizzle-kit';
 
 try {
@@ -6,11 +8,14 @@ try {
   // .env not present — rely on env vars already being set (e.g. in CI)
 }
 
+const dbPath = process.env.DATABASE_PATH ?? './data/flagline.db';
+mkdirSync(dirname(dbPath), { recursive: true });
+
 export default {
   schema: './src/db/schema.ts',
   out: './src/db/migrations',
   dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_PATH ?? './data/flagline.db',
+    url: dbPath,
   },
 } satisfies Config;
