@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "setup": "[ -f .env ] || cp .env.example .env && pnpm install && pnpm pods:up && pnpm --filter @falcon/server migrate",
+    "setup": "[ -f .env ] || cp .env.example .env && pnpm install && mkdir -p data && pnpm pods:up && pnpm --filter @falcon/server migrate",
     "predev": "[ -f .env ] || cp .env.example .env",
     "dev": "pnpm pods:up && pnpm --filter @falcon/server dev",
     "pods:up": "podman compose up -d 2>/dev/null || docker compose up -d",
@@ -26,5 +26,10 @@
   "dependencies": {
     "uuidv7": "^1.1.0",
     "winston": "^3.19.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

@@ -5,7 +5,7 @@ import { createApp } from '../app.js';
 import { createDb } from '../db/connection.js';
 import type { AuditQueue } from '../queue/client.js';
 import { createUserKey } from '../user-keys/service.js';
-import { DATABASE_URL } from './config.js';
+import { DATABASE_PATH } from './config.js';
 
 const stubQueue = { add: async () => {} } as unknown as AuditQueue;
 const testAppConfig = { BOOTSTRAP_ADMIN_KEY: 'test-bootstrap-key' };
@@ -42,7 +42,7 @@ describe('Evaluate API', () => {
   let userKey: string;
 
   beforeAll(async () => {
-    sharedDb = createDb(DATABASE_URL);
+    sharedDb = createDb(DATABASE_PATH);
 
     const { rawKey: uk } = await createUserKey(
       `eval-test-${Math.random().toString(36).slice(2)}@example.com`,

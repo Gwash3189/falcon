@@ -1,14 +1,14 @@
 /**
- * PostgreSQL error codes we handle explicitly.
- * https://www.postgresql.org/docs/current/errcodes-appendix.html
+ * SQLite error codes we handle explicitly.
+ * https://www.sqlite.org/rescode.html
  */
-const PG_UNIQUE_VIOLATION = '23505';
+const SQLITE_UNIQUE_VIOLATION = 'SQLITE_CONSTRAINT_UNIQUE';
 
 export function isUniqueViolation(err: unknown): boolean {
   return (
     err !== null &&
     typeof err === 'object' &&
     'code' in err &&
-    (err as { code: unknown }).code === PG_UNIQUE_VIOLATION
+    (err as { code: unknown }).code === SQLITE_UNIQUE_VIOLATION
   );
 }

@@ -32,20 +32,6 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: falcon
-          POSTGRES_PASSWORD: falcon
-          POSTGRES_DB: falcon_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
       valkey:
         image: valkey/valkey:8
         ports:
@@ -71,16 +57,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Create data directory
+        run: mkdir -p data
+
       - name: Run migrations
         run: pnpm --filter @falcon/server db:migrate
         env:
-          DATABASE_URL: postgresql://falcon:falcon@localhost:5432/falcon_test
+          DATABASE_PATH: ./data/falcon_test.db
           VALKEY_URL: redis://localhost:6379
           BOOTSTRAP_ADMIN_KEY: ci-bootstrap-key
 
       - name: Run tests
         run: pnpm vitest run
         env:
-          DATABASE_URL: postgresql://falcon:falcon@localhost:5432/falcon_test
+          DATABASE_PATH: ./data/falcon_test.db
           VALKEY_URL: redis://localhost:6379
           BOOTSTRAP_ADMIN_KEY: ci-bootstrap-key

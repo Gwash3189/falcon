@@ -1,26 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1772961880939,
-      "tag": "0000_late_shape",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774257513378,
-      "tag": "0001_shocking_the_executioner",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774320600000,
-      "tag": "0002_drop_audit_log_fk",
+      "version": "6",
+      "when": 1774428302870,
+      "tag": "0000_far_praxagora",
       "breakpoints": true
     }
   ]

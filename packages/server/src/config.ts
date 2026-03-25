@@ -6,7 +6,7 @@ import { z } from 'zod';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
+  DATABASE_PATH: z.string().min(1).default('./data/flagline.db'),
   VALKEY_URL: z.string().url(),
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

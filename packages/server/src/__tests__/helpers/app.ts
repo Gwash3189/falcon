@@ -3,15 +3,15 @@
  * Redis and the audit queue are stubbed — integration tests focus on HTTP
  * behaviour, not on cache or background-job correctness.
  *
- * Integration tests require a running PostgreSQL database. They are skipped
- * automatically when DATABASE_URL is not set (e.g. in pure-unit CI jobs).
+ * Integration tests use a SQLite database file. No external database container
+ * is required — the file is created automatically by better-sqlite3.
  */
 import type { Redis } from 'iovalkey';
 import { createApp } from '../../app.js';
 import { createDb } from '../../db/connection.js';
 import type { AuditQueue } from '../../queue/client.js';
 import { createUserKey } from '../../user-keys/service.js';
-import { DATABASE_URL } from '../config.js';
+import { DATABASE_PATH } from '../config.js';
 
 export const stubRedis = {
   get: async () => null,
@@ -29,10 +29,10 @@ const testAppConfig = {
 };
 
 export async function createTestApp() {
-  if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL must be set to run integration tests');
+  if (!DATABASE_PATH) {
+    throw new Error('DATABASE_PATH must be set to run integration tests');
   }
-  const db = createDb(DATABASE_URL);
+  const db = createDb(DATABASE_PATH);
   const app = createApp({ db, redis: stubRedis, queue: stubQueue, appConfig: testAppConfig });
 
   // Create a user key for authenticated CRUD requests

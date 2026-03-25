@@ -7,8 +7,8 @@ import { createAuditWorker } from './queue/worker.js';
 
 export function createServer() {
   const appConfig = config();
-  const { DATABASE_URL, VALKEY_URL } = appConfig;
-  const db = createDb(DATABASE_URL);
+  const { DATABASE_PATH, VALKEY_URL } = appConfig;
+  const db = createDb(DATABASE_PATH);
   const redis = new Redis(VALKEY_URL);
   const queue = createAuditQueue(VALKEY_URL);
   const worker = createAuditWorker(VALKEY_URL, db);
