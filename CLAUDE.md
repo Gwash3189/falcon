@@ -10,7 +10,7 @@ The deployment model is npm-based: users install and run `npx @flagline/server` 
 
 - **Runtime:** Node.js 20+ with TypeScript (strict mode, ESM everywhere)
 - **API Framework:** Hono (with @hono/node-server for Node deployment)
-- **Database:** PostgreSQL 16 via Drizzle ORM with the `postgres` driver
+- **Database:** SQLite via Drizzle ORM with the `better-sqlite3` driver (file at `./data/flagline.db`)
 - **Cache:** Valkey 7 via ioredis
 - **CLI:** oclif (TypeScript-native, command-per-file pattern)
 - **Validation:** Zod (used everywhere — env parsing, API request validation, CLI input)
@@ -19,7 +19,7 @@ The deployment model is npm-based: users install and run `npx @flagline/server` 
 - **Test:** Vitest + Hono test client for integration tests
 - **Lint/Format:** Biome (replaces ESLint + Prettier)
 - **Package Manager:** pnpm with workspaces
-- **Containers:** Podman (recommended) or Docker — compose file is runtime-agnostic
+- **Containers:** Podman (recommended) or Docker — compose file is runtime-agnostic (only Valkey; no database container needed)
 
 ## Package Architecture
 
@@ -145,7 +145,7 @@ Build these. No more, no less.
 
 ### Architecture Patterns
 
-- **Factory functions, not singletons.** `createDb(url)`, `createApp(deps)`, never module-level instances. This makes testing trivial and dependencies traceable.
+- **Factory functions, not singletons.** `createDb(path)`, `createApp(deps)`, never module-level instances. This makes testing trivial and dependencies traceable.
 - **Dependency injection via function arguments.** The app factory receives its dependencies (db, cache, config). No service locators, no DI frameworks.
 - **Thin route handlers.** A route handler validates input, calls a service function, and returns a response. Business logic lives in service functions, not in handlers.
 - **Service functions are pure-ish.** They receive what they need as arguments (db client, validated input) and return results. They don't reach into global state.
@@ -182,7 +182,7 @@ Build these. No more, no less.
 ### Testing
 
 - Test files live next to source: `src/db/__tests__/connection.test.ts`.
-- Integration tests that need Postgres use a real database (via container). No mocking the database layer.
+- Integration tests that need the database use a real SQLite file. No mocking the database layer, no container required.
 - Use the Hono test client for API integration tests — no real HTTP server needed.
 - Name tests descriptively: `it('returns 503 when database is unreachable')`.
 - Each test should be independent. No shared mutable state between tests.

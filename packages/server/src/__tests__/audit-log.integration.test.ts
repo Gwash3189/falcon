@@ -12,7 +12,7 @@ import { auditLog } from '../db/schema/index.js';
 import { createAuditQueue } from '../queue/client.js';
 import { createAuditWorker } from '../queue/worker.js';
 import { createUserKey } from '../user-keys/service.js';
-import { DATABASE_URL, VALKEY_URL } from './config.js';
+import { DATABASE_PATH, VALKEY_URL } from './config.js';
 
 const testAppConfig = { BOOTSTRAP_ADMIN_KEY: 'test-bootstrap-key' };
 
@@ -38,7 +38,7 @@ describe('Audit log', () => {
   let userEmail: string;
 
   beforeAll(async () => {
-    db = createDb(DATABASE_URL);
+    db = createDb(DATABASE_PATH);
     queue = createAuditQueue(VALKEY_URL);
     worker = createAuditWorker(VALKEY_URL, db);
 

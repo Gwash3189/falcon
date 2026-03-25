@@ -17,7 +17,7 @@ async function shutdown() {
   await worker.close();
   await queue.close();
   await redis.quit();
-  await db.$client.end();
+  db.$client.close();
   process.exit(0);
 }
 

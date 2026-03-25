@@ -6,7 +6,7 @@ import { userApiKeys } from '../db/schema/index.js';
 
 let _db: ReturnType<typeof createDb> | undefined;
 function db() {
-  if (!_db) _db = createDb(config().DATABASE_URL);
+  if (!_db) _db = createDb(config().DATABASE_PATH);
   return _db;
 }
 
@@ -58,7 +58,8 @@ export async function revokeByEmail(email: string): Promise<number> {
   const result = await database
     .update(userApiKeys)
     .set({ revokedAt: new Date() })
-    .where(and(eq(userApiKeys.email, email), isNull(userApiKeys.revokedAt)));
+    .where(and(eq(userApiKeys.email, email), isNull(userApiKeys.revokedAt)))
+    .returning({ id: userApiKeys.id });
   return result.length;
 }
 
